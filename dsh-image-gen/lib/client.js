@@ -106,15 +106,8 @@ window.__ModuleLoader__.load({
       )
     }
 
-    function apply(ctx) {
-      ctx.slots.inject('settings.section', function () {
-        return ctx.slots.register({
-          name: 'settings.section',
-          id: 'image-gen',
-          order: 13,
-          label: '生图模型',
-        }, ImageGenSection)
-      })
+    function apply() {
+      // 生图模型配置已合并至「AI 模型」设置页（dsh-vision-helper），此处不再注册独立分区
     }
 
     exports.apply = apply

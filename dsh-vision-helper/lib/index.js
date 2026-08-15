@@ -330,5 +330,99 @@ export function apply(ctx, config) {
             },
         });
     });
+    // ── 配置接口：模型枚举（providers）+ 保存（config）──
+    function jsonResponse(res, status, payload) {
+        res.writeHead(status, { 'content-type': 'application/json', 'cache-control': 'no-store' });
+        res.end(JSON.stringify(payload));
+    }
+    function readBody(req) {
+        return new Promise((resolve) => {
+            let data = '';
+            req.on('data', (chunk) => { data += chunk; });
+            req.on('end', () => {
+                try {
+                    resolve(JSON.parse(data || '{}'));
+                }
+                catch {
+                    resolve(null);
+                }
+            });
+            req.on('error', () => resolve(null));
+        });
+    }
+    async function saveVisionActive(key) {
+        const target = await ctx.fs.resolve(config.modelRouterPath || '.dsh/model-router.json');
+        let parsed = {};
+        try {
+            parsed = JSON.parse(await ctx.fs.readText(target));
+        }
+        catch { /* 无文件则新建 */ }
+        const list = Array.isArray(parsed.vision) ? parsed.vision : [];
+        const parts = splitKey(key);
+        if (parts && !list.some((item) => item.provider === parts.provider && item.model === parts.model)) {
+            list.push({ provider: parts.provider, model: parts.model });
+        }
+        const next = { ...parsed, vision: list, visionActive: key };
+        await ctx.fs.writeText(target, JSON.stringify(next, null, 2));
+    }
+    ctx.effect(() => {
+        const webServer = ctx.webServer;
+        if (!webServer)
+            return;
+        return webServer.register({
+            kind: 'exact',
+            path: '/api/vision-helper/providers',
+            handler: async (_req, res) => {
+                try {
+                    const providers = [];
+                    for (const info of ctx.llm.listProviders()) {
+                        let models = [];
+                        try {
+                            models = await ctx.llm.listModels(info.id);
+                        }
+                        catch { /* 无发现 */ }
+                        providers.push({
+                            id: info.id,
+                            name: info.name,
+                            models: models.map((m) => ({
+                                id: m.id,
+                                name: m.name || m.id,
+                                input: Array.isArray(m.input) ? m.input : null,
+                            })),
+                        });
+                    }
+                    const active = (await resolveVisionModels(ctx, config))[0] || null;
+                    jsonResponse(res, 200, { ok: true, providers, active });
+                }
+                catch (error) {
+                    jsonResponse(res, 500, { ok: false, error: String(error?.message ?? error) });
+                }
+            },
+        });
+    });
+    ctx.effect(() => {
+        const webServer = ctx.webServer;
+        if (!webServer)
+            return;
+        return webServer.register({
+            kind: 'exact',
+            path: '/api/vision-helper/config',
+            handler: async (req, res) => {
+                try {
+                    if (req.method !== 'POST')
+                        return jsonResponse(res, 405, { ok: false, error: 'method not allowed' });
+                    const body = await readBody(req);
+                    const key = body && typeof body.visionActive === 'string' ? body.visionActive : '';
+                    if (!splitKey(key))
+                        return jsonResponse(res, 400, { ok: false, error: 'visionActive 须为 provider/model 格式' });
+                    await saveVisionActive(key);
+                    jsonResponse(res, 200, { ok: true, active: key });
+                }
+                catch (error) {
+                    jsonResponse(res, 500, { ok: false, error: String(error?.message ?? error) });
+                }
+            },
+        });
+    });
 }
 //# sourceMappingURL=index.js.map
