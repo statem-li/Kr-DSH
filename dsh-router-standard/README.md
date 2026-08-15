@@ -1,0 +1,144 @@
+# dsh-router-standard
+
+**Task-aware reasoning-mode router for DeepSeek Harness.** One preset, one
+continuous `react ↔ spec` axis, **three measured behavior bands**, and a router
+that picks the right band from the task before the first model request.
+
+> This is a research artifact. It encodes a measured property of DeepSeek V4
+> Pro / V4 Flash: model behavior along the persona axis is **not a continuum**
+> — it collapses into a few stable regions separated by phase transitions.
+> The router therefore quantizes to the stable regions instead of pretending
+> the axis is continuously tunable.
+
+## What it does
+
+Reads the session's first user message, classifies the task, and on the first
+model request injects:
+
+1. a **persona** matching the reasoning mode (spec plan-first / react doer), and
+2. a **first-turn core tool set** (read-first for spec, write-first for react).
+
+After the first durable tool call the full Standard catalog is exposed and the
+router stops touching anything. The mode is derived from durable session
+events, so resume/reload keeps it. The plan-mode prompt section is preserved
+(only the persona section is replaced), so plan boundaries do not reset the
+model's focus.
+
+## The three measured behavior bands
+
+Fine-grained probing (21 mode points × n=2, official API, reasoning_effort=max)
+on V4 Pro shows behavior along the persona axis collapses into **three bands**:
+
+| band | mode | measured behavior |
+|---|---|---|
+| `spec` | 0 – 0.19 | stable plan-collective (`We` trajectories, let-me ≈ 0) |
+| `mixed` | 0.2 – 0.49 | **transition trap**: unstable mixing of `We`/`The`/`Let` |
+| `react` | 0.5 – 1.0 | stable doer (`The`/`Let` first-person, we ≈ 0) — 11 mode values behave alike |
+
+V4 Flash is threshold-like (0–0.5 all spec side, jumps at 0.75+). The numeric
+`dev_router_mode` interface is kept, but it quantizes to the three bands — the
+transition band is never selected automatically.
+
+## Why: dual-attractor RL policy
+
+Evidence across projects (see `docs/paper.md` and `docs/experiments.md`):
+
+- The **same model** reaches top-band scores under spec conditions on a
+  maintenance benchmark (Project2: minimal 99/96, anchored 98/99) and under
+  react/code conditions on a greenfield build task (Mario: 10/10), while the
+  wrong mode scores 91 / 6 respectively — a ~10-point swing from prompt
+  conditioning alone ("god/ghost duality").
+- Persona is the dominant trigger (one-sentence swap flips the trajectory);
+  tool-schema surface is a secondary condition; catalog text in a user message
+  has no effect.
+- Behavior is path-committed: once anchored, expanding the tool catalog
+  perturbs at most one reasoning block and never flips the mode.
+- Intermediate personas are **out-of-distribution** (training-distribution
+  gap), which is the measured unstable band.
+
+The model cannot self-route: P3 (same persona, task swap → trajectory
+unchanged), P5 (router personas → doer attractor absorbs the instruction) and
+P8 (domain-overlap scan) show the only internal-routing window is a WEAK
+persona + few-shot routing instruction (lean, not flip; discrimination
++2.3..+3.3). There is no reward signal for switching modes mid session, and
+the behavior phase transition means the model commits on the first request.
+**Mode selection must come from outside** — a human (the "streamer"), a
+heuristic classifier, or a learned router. This preset is the automated
+version of that external routing.
+
+## Usage
+
+Install as a DSH agent preset:
+
+```powershell
+$target = Join-Path $env:USERPROFILE '.dsh\.agent-presets\router-standard'
+Copy-Item -Recurse .\preset $target
+# NOTE: installed copies must keep unique module filenames
+# (the loader caches ESM modules by URL; do not overwrite in place)
+```
+
+Restart DSH, start a new session, pick **Router Standard (experimental)**.
+
+- `dev_router_status` — current mode, band, persona, core tools, override state
+- `dev_router_mode <spec|weak|mixed|react|0-100|0.0-1.0|auto>` — explicit mode
+  (numeric inputs quantize to the three bands)
+- `dev_mode_subagent <spec|react|balanced> <task>` — run one task in a
+  DIFFERENT reasoning mode inside a fresh isolated context (its own system
+  prompt), leaving the current trajectory untouched. Mode isolation is the
+  only reliable way to change modes mid-session: mid-session persona switches
+  invalidate the whole prefix cache, tail personas are ineffective (P6), and
+  the native subagent inherits this persona.
+
+**One preset, auto-matched per model.** There is no Pro/Flash split to
+configure: `personaFor(mode, modelId)` reads the session's model route and
+selects the measured optimum automatically — Pro → w6c (spec sentence +
+classify instruction, no anchors; 24/24 = 100% routing, P24), Flash → w7 +
+recall/anti-runaway anchors (96% routing; 100% single-task completion, P23).
+The model is fixed at the first request (path commitment), so the persona is
+locked for the session; switching the GUI model starts a new session with the
+matching configuration.
+
+**Depth-adaptive guidance (v20, thinking efficiency).** Per-message guidance
+is dispatched by task complexity (`isComplexTask`: length or architecture
+keywords):
+- **simple tasks** → fast-convergence guide (P30: 1 step, zero waste);
+- **complex tasks** → decision-closure deep guide: "Think deeply about the
+  architecture, edge cases, and integration points. Do not spend reasoning
+  on the environment or tooling. Produce when your information is complete.
+  End each reasoning block with a decision or an information need." —
+  P30: depth +12% AND faster convergence (8.0 vs 8.3 steps), 3/3 completion.
+- Rumination (environment suspicion / re-confirmation) is suppressed by the
+  anti-runaway anchor: measured 0.0-0.3% of reasoning tokens.
+
+## Tests
+
+```sh
+node --test router.test.mjs   # 11 tests: classification, bands, personas, plan-section survival
+```
+
+## Files
+
+- `preset/agent.cordis.yml` — full rc.6 Standard composition + router row
+- `preset/router-core.mjs` — pure routing logic (zero deps, unit-testable)
+- `preset/router-bootstrap.mjs` — Cordis plugin (zero external imports)
+- `router.test.mjs` — unit tests
+- `docs/paper.md` — the theory + experiments write-up
+- `docs/experiments.md` — full data tables
+
+## Evidence & attribution
+
+- Trajectory trigger matrix, dual-model matrices, and the 21-point phase probe:
+  `dsh-probe` (this repo's sibling scripts live in the paper's appendix tables).
+- Project2 evaluation data: [xiaobright/modeltest](https://github.com/xiaobright/modeltest)
+  (V4.1b, frozen) — minimal 99/96, standard 91, PTC 92, anchored-standard 98/99.
+- Two-phase anchoring preset: [xiaobright/dsh-anchored-standard](https://github.com/xiaobright/dsh-anchored-standard)
+  (MIT). The router's first-turn anchoring is a plugin-level port of its
+  `tool-bootstrap` mechanism.
+- DeepSeek Harness official `minimal` preset snapshot
+  (`sends the exact RL prompt and schemas` test) — the spec persona and the
+  RL-alignment claim.
+
+## License
+
+MIT. `preset/agent.cordis.yml` derives from the DeepSeek Harness Standard
+preset (MIT); original attribution in `NOTICE`.

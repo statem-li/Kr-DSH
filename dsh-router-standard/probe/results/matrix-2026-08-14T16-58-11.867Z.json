@@ -1,0 +1,272 @@
+{
+  "model": "deepseek-v4-pro",
+  "results": [
+    {
+      "id": "B1-plus-edit",
+      "group": "B",
+      "runs": [
+        {
+          "classification": "minimal-like",
+          "score": 5,
+          "metrics": {
+            "chars": 197,
+            "we": 2,
+            "letMe": 0,
+            "lets": 1,
+            "i": 0,
+            "firstToken": "We",
+            "markerFirstLine": false,
+            "visibleBeforeTool": false
+          },
+          "finishReason": "tool_calls",
+          "toolNames": [
+            "bash",
+            "bash"
+          ],
+          "inputTokens": 532,
+          "outputTokens": 143
+        },
+        {
+          "classification": "minimal-like",
+          "score": 5,
+          "metrics": {
+            "chars": 207,
+            "we": 2,
+            "letMe": 0,
+            "lets": 2,
+            "i": 0,
+            "firstToken": "We",
+            "markerFirstLine": false,
+            "visibleBeforeTool": false
+          },
+          "finishReason": "tool_calls",
+          "toolNames": [
+            "bash",
+            "bash"
+          ],
+          "inputTokens": 532,
+          "outputTokens": 146
+        }
+      ],
+      "summary": {
+        "n": 2,
+        "labels": {
+          "minimal-like": 2
+        },
+        "firstTokens": "Wex2",
+        "avg": {
+          "we": "2.0",
+          "letMe": "0.0",
+          "lets": "1.5",
+          "marker": 0
+        },
+        "toolNames": [
+          "bash",
+          "bash",
+          "bash",
+          "bash"
+        ]
+      }
+    },
+    {
+      "id": "B2-plus-grep",
+      "group": "B",
+      "runs": [
+        {
+          "classification": "ambiguous",
+          "score": -2,
+          "metrics": {
+            "chars": 158,
+            "we": 0,
+            "letMe": 1,
+            "lets": 0,
+            "i": 1,
+            "firstToken": "The",
+            "markerFirstLine": false,
+            "visibleBeforeTool": false
+          },
+          "finishReason": "tool_calls",
+          "toolNames": [
+            "bash",
+            "bash"
+          ],
+          "inputTokens": 501,
+          "outputTokens": 130
+        },
+        {
+          "classification": "minimal-like",
+          "score": 5,
+          "metrics": {
+            "chars": 151,
+            "we": 1,
+            "letMe": 0,
+            "lets": 1,
+            "i": 0,
+            "firstToken": "We",
+            "markerFirstLine": false,
+            "visibleBeforeTool": false
+          },
+          "finishReason": "tool_calls",
+          "toolNames": [
+            "bash",
+            "bash"
+          ],
+          "inputTokens": 501,
+          "outputTokens": 138
+        }
+      ],
+      "summary": {
+        "n": 2,
+        "labels": {
+          "ambiguous": 1,
+          "minimal-like": 1
+        },
+        "firstTokens": "Thex1 Wex1",
+        "avg": {
+          "we": "0.5",
+          "letMe": "0.5",
+          "lets": "0.5",
+          "marker": 0
+        },
+        "toolNames": [
+          "bash",
+          "bash",
+          "bash",
+          "bash"
+        ]
+      }
+    },
+    {
+      "id": "B3-plus-glob",
+      "group": "B",
+      "runs": [
+        {
+          "classification": "minimal-like",
+          "score": 4,
+          "metrics": {
+            "chars": 108,
+            "we": 2,
+            "letMe": 0,
+            "lets": 1,
+            "i": 0,
+            "firstToken": "We",
+            "markerFirstLine": false,
+            "visibleBeforeTool": true
+          },
+          "finishReason": "tool_calls",
+          "toolNames": [
+            "bash"
+          ],
+          "inputTokens": 498,
+          "outputTokens": 94
+        },
+        {
+          "classification": "minimal-like",
+          "score": 5,
+          "metrics": {
+            "chars": 99,
+            "we": 1,
+            "letMe": 0,
+            "lets": 1,
+            "i": 0,
+            "firstToken": "We",
+            "markerFirstLine": false,
+            "visibleBeforeTool": false
+          },
+          "finishReason": "tool_calls",
+          "toolNames": [
+            "bash",
+            "glob"
+          ],
+          "inputTokens": 498,
+          "outputTokens": 105
+        }
+      ],
+      "summary": {
+        "n": 2,
+        "labels": {
+          "minimal-like": 2
+        },
+        "firstTokens": "Wex2",
+        "avg": {
+          "we": "1.5",
+          "letMe": "0.0",
+          "lets": "1.0",
+          "marker": 0
+        },
+        "toolNames": [
+          "bash",
+          "bash",
+          "glob"
+        ]
+      }
+    },
+    {
+      "id": "B4-work-surface",
+      "group": "B",
+      "runs": [
+        {
+          "classification": "minimal-like",
+          "score": 5,
+          "metrics": {
+            "chars": 179,
+            "we": 2,
+            "letMe": 0,
+            "lets": 1,
+            "i": 0,
+            "firstToken": "We",
+            "markerFirstLine": false,
+            "visibleBeforeTool": false
+          },
+          "finishReason": "tool_calls",
+          "toolNames": [
+            "bash",
+            "glob"
+          ],
+          "inputTokens": 737,
+          "outputTokens": 124
+        },
+        {
+          "classification": "minimal-like",
+          "score": 5,
+          "metrics": {
+            "chars": 124,
+            "we": 1,
+            "letMe": 0,
+            "lets": 1,
+            "i": 0,
+            "firstToken": "We",
+            "markerFirstLine": false,
+            "visibleBeforeTool": false
+          },
+          "finishReason": "tool_calls",
+          "toolNames": [
+            "bash",
+            "glob"
+          ],
+          "inputTokens": 737,
+          "outputTokens": 109
+        }
+      ],
+      "summary": {
+        "n": 2,
+        "labels": {
+          "minimal-like": 2
+        },
+        "firstTokens": "Wex2",
+        "avg": {
+          "we": "1.5",
+          "letMe": "0.0",
+          "lets": "1.0",
+          "marker": 0
+        },
+        "toolNames": [
+          "bash",
+          "glob",
+          "bash",
+          "glob"
+        ]
+      }
+    }
+  ]
+}

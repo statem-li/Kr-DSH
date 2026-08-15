@@ -1,0 +1,247 @@
+{
+  "model": "deepseek-v4-pro",
+  "results": [
+    {
+      "mode": 0,
+      "labels": {
+        "minimal-like": 2
+      },
+      "firstTokens": "Wex2",
+      "avg": {
+        "we": "1.5",
+        "letMe": "0.0"
+      }
+    },
+    {
+      "mode": 0.05,
+      "labels": {
+        "minimal-like": 1,
+        "ambiguous": 1
+      },
+      "firstTokens": "Wex2",
+      "avg": {
+        "we": "2.0",
+        "letMe": "0.5"
+      }
+    },
+    {
+      "mode": 0.1,
+      "labels": {
+        "minimal-like": 2
+      },
+      "firstTokens": "Wex2",
+      "avg": {
+        "we": "1.0",
+        "letMe": "0.0"
+      }
+    },
+    {
+      "mode": 0.15,
+      "labels": {
+        "minimal-like": 2
+      },
+      "firstTokens": "Wex2",
+      "avg": {
+        "we": "1.0",
+        "letMe": "0.0"
+      }
+    },
+    {
+      "mode": 0.2,
+      "labels": {
+        "ambiguous": 2
+      },
+      "firstTokens": "Thex1 Wex1",
+      "avg": {
+        "we": "0.5",
+        "letMe": "1.0"
+      }
+    },
+    {
+      "mode": 0.25,
+      "labels": {
+        "ambiguous": 1,
+        "minimal-like": 1
+      },
+      "firstTokens": "Wex2",
+      "avg": {
+        "we": "1.0",
+        "letMe": "0.5"
+      }
+    },
+    {
+      "mode": 0.3,
+      "labels": {
+        "standard-like": 1,
+        "minimal-like": 1
+      },
+      "firstTokens": "Letx1 Wex1",
+      "avg": {
+        "we": "1.0",
+        "letMe": "1.0"
+      }
+    },
+    {
+      "mode": 0.35,
+      "labels": {
+        "ambiguous": 1,
+        "standard-like": 1
+      },
+      "firstTokens": "Thex1 Letx1",
+      "avg": {
+        "we": "0.0",
+        "letMe": "1.0"
+      }
+    },
+    {
+      "mode": 0.4,
+      "labels": {
+        "minimal-like": 1,
+        "ambiguous": 1
+      },
+      "firstTokens": "Wex1 Thex1",
+      "avg": {
+        "we": "0.5",
+        "letMe": "0.5"
+      }
+    },
+    {
+      "mode": 0.45,
+      "labels": {
+        "ambiguous": 2
+      },
+      "firstTokens": "Thex2",
+      "avg": {
+        "we": "0.0",
+        "letMe": "1.0"
+      }
+    },
+    {
+      "mode": 0.5,
+      "labels": {
+        "ambiguous": 2
+      },
+      "firstTokens": "Thex2",
+      "avg": {
+        "we": "0.0",
+        "letMe": "1.0"
+      }
+    },
+    {
+      "mode": 0.55,
+      "labels": {
+        "standard-like": 1,
+        "minimal-like": 1
+      },
+      "firstTokens": "Letx1 Wex1",
+      "avg": {
+        "we": "0.5",
+        "letMe": "0.5"
+      }
+    },
+    {
+      "mode": 0.6,
+      "labels": {
+        "ambiguous": 2
+      },
+      "firstTokens": "Thex2",
+      "avg": {
+        "we": "0.0",
+        "letMe": "1.0"
+      }
+    },
+    {
+      "mode": 0.65,
+      "labels": {
+        "ambiguous": 2
+      },
+      "firstTokens": "Thex2",
+      "avg": {
+        "we": "0.0",
+        "letMe": "1.0"
+      }
+    },
+    {
+      "mode": 0.7,
+      "labels": {
+        "ambiguous": 1,
+        "standard-like": 1
+      },
+      "firstTokens": "Thex1 Letx1",
+      "avg": {
+        "we": "0.0",
+        "letMe": "1.0"
+      }
+    },
+    {
+      "mode": 0.75,
+      "labels": {
+        "ambiguous": 1,
+        "standard-like": 1
+      },
+      "firstTokens": "Thex1 Letx1",
+      "avg": {
+        "we": "0.0",
+        "letMe": "1.0"
+      }
+    },
+    {
+      "mode": 0.8,
+      "labels": {
+        "ambiguous": 2
+      },
+      "firstTokens": "x1 Thex1",
+      "avg": {
+        "we": "0.0",
+        "letMe": "0.5"
+      }
+    },
+    {
+      "mode": 0.85,
+      "labels": {
+        "ambiguous": 1,
+        "standard-like": 1
+      },
+      "firstTokens": "Thex1 Letx1",
+      "avg": {
+        "we": "0.0",
+        "letMe": "1.0"
+      }
+    },
+    {
+      "mode": 0.9,
+      "labels": {
+        "ambiguous": 2
+      },
+      "firstTokens": "Thex2",
+      "avg": {
+        "we": "0.0",
+        "letMe": "1.0"
+      }
+    },
+    {
+      "mode": 0.95,
+      "labels": {
+        "standard-like": 1,
+        "ambiguous": 1
+      },
+      "firstTokens": "Letx1 Thex1",
+      "avg": {
+        "we": "0.0",
+        "letMe": "1.0"
+      }
+    },
+    {
+      "mode": 1,
+      "labels": {
+        "ambiguous": 1,
+        "standard-like": 1
+      },
+      "firstTokens": "Thex1 Letx1",
+      "avg": {
+        "we": "0.0",
+        "letMe": "1.0"
+      }
+    }
+  ]
+}

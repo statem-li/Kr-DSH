@@ -1,0 +1,519 @@
+{
+  "model": "deepseek-v4-pro",
+  "results": [
+    {
+      "id": "V1-work7-stable",
+      "n": 5,
+      "labels": {
+        "minimal-like": 5
+      },
+      "firstTokens": "Wex5",
+      "avg": {
+        "we": "1.6",
+        "letMe": "0.0",
+        "lets": "1.4",
+        "marker": 0
+      },
+      "toolNames": [
+        "bash",
+        "glob",
+        "bash",
+        "glob",
+        "bash",
+        "glob",
+        "bash",
+        "bash",
+        "bash",
+        "glob"
+      ],
+      "runs": [
+        {
+          "classification": "minimal-like",
+          "score": 5,
+          "metrics": {
+            "chars": 254,
+            "we": 3,
+            "letMe": 0,
+            "lets": 2,
+            "i": 0,
+            "firstToken": "We",
+            "markerFirstLine": false,
+            "visibleBeforeTool": false
+          },
+          "finishReason": "tool_calls",
+          "toolNames": [
+            "bash",
+            "glob"
+          ],
+          "inputTokens": 737,
+          "outputTokens": 139
+        },
+        {
+          "classification": "minimal-like",
+          "score": 5,
+          "metrics": {
+            "chars": 144,
+            "we": 2,
+            "letMe": 0,
+            "lets": 1,
+            "i": 0,
+            "firstToken": "We",
+            "markerFirstLine": false,
+            "visibleBeforeTool": false
+          },
+          "finishReason": "tool_calls",
+          "toolNames": [
+            "bash",
+            "glob"
+          ],
+          "inputTokens": 737,
+          "outputTokens": 128
+        },
+        {
+          "classification": "minimal-like",
+          "score": 5,
+          "metrics": {
+            "chars": 150,
+            "we": 1,
+            "letMe": 0,
+            "lets": 1,
+            "i": 0,
+            "firstToken": "We",
+            "markerFirstLine": false,
+            "visibleBeforeTool": false
+          },
+          "finishReason": "tool_calls",
+          "toolNames": [
+            "bash",
+            "glob"
+          ],
+          "inputTokens": 737,
+          "outputTokens": 124
+        },
+        {
+          "classification": "minimal-like",
+          "score": 5,
+          "metrics": {
+            "chars": 180,
+            "we": 1,
+            "letMe": 0,
+            "lets": 1,
+            "i": 0,
+            "firstToken": "We",
+            "markerFirstLine": false,
+            "visibleBeforeTool": false
+          },
+          "finishReason": "tool_calls",
+          "toolNames": [
+            "bash",
+            "bash"
+          ],
+          "inputTokens": 737,
+          "outputTokens": 143
+        },
+        {
+          "classification": "minimal-like",
+          "score": 4,
+          "metrics": {
+            "chars": 234,
+            "we": 1,
+            "letMe": 0,
+            "lets": 2,
+            "i": 0,
+            "firstToken": "We",
+            "markerFirstLine": false,
+            "visibleBeforeTool": true
+          },
+          "finishReason": "tool_calls",
+          "toolNames": [
+            "bash",
+            "glob"
+          ],
+          "inputTokens": 737,
+          "outputTokens": 154
+        }
+      ]
+    },
+    {
+      "id": "V2-work7-plus-short-workflow",
+      "n": 5,
+      "labels": {
+        "minimal-like": 3,
+        "ambiguous": 1,
+        "standard-like": 1
+      },
+      "firstTokens": "Wex3 Thex1 Letx1",
+      "avg": {
+        "we": "1.0",
+        "letMe": "0.4",
+        "lets": "0.8",
+        "marker": 0
+      },
+      "toolNames": [
+        "bash",
+        "glob",
+        "bash",
+        "glob",
+        "bash",
+        "glob",
+        "bash",
+        "glob",
+        "bash",
+        "glob"
+      ],
+      "runs": [
+        {
+          "classification": "minimal-like",
+          "score": 5,
+          "metrics": {
+            "chars": 107,
+            "we": 1,
+            "letMe": 0,
+            "lets": 1,
+            "i": 0,
+            "firstToken": "We",
+            "markerFirstLine": false,
+            "visibleBeforeTool": false
+          },
+          "finishReason": "tool_calls",
+          "toolNames": [
+            "bash",
+            "glob"
+          ],
+          "inputTokens": 781,
+          "outputTokens": 109
+        },
+        {
+          "classification": "minimal-like",
+          "score": 4,
+          "metrics": {
+            "chars": 326,
+            "we": 2,
+            "letMe": 0,
+            "lets": 2,
+            "i": 0,
+            "firstToken": "We",
+            "markerFirstLine": false,
+            "visibleBeforeTool": true
+          },
+          "finishReason": "tool_calls",
+          "toolNames": [
+            "bash",
+            "glob"
+          ],
+          "inputTokens": 781,
+          "outputTokens": 169
+        },
+        {
+          "classification": "minimal-like",
+          "score": 5,
+          "metrics": {
+            "chars": 179,
+            "we": 2,
+            "letMe": 0,
+            "lets": 1,
+            "i": 0,
+            "firstToken": "We",
+            "markerFirstLine": false,
+            "visibleBeforeTool": false
+          },
+          "finishReason": "tool_calls",
+          "toolNames": [
+            "bash",
+            "glob"
+          ],
+          "inputTokens": 781,
+          "outputTokens": 125
+        },
+        {
+          "classification": "ambiguous",
+          "score": -2,
+          "metrics": {
+            "chars": 115,
+            "we": 0,
+            "letMe": 1,
+            "lets": 0,
+            "i": 0,
+            "firstToken": "The",
+            "markerFirstLine": false,
+            "visibleBeforeTool": false
+          },
+          "finishReason": "tool_calls",
+          "toolNames": [
+            "bash",
+            "glob"
+          ],
+          "inputTokens": 781,
+          "outputTokens": 104
+        },
+        {
+          "classification": "standard-like",
+          "score": -5,
+          "metrics": {
+            "chars": 85,
+            "we": 0,
+            "letMe": 1,
+            "lets": 0,
+            "i": 1,
+            "firstToken": "Let",
+            "markerFirstLine": false,
+            "visibleBeforeTool": false
+          },
+          "finishReason": "tool_calls",
+          "toolNames": [
+            "bash",
+            "glob"
+          ],
+          "inputTokens": 781,
+          "outputTokens": 96
+        }
+      ]
+    },
+    {
+      "id": "V3-promote-work7-to-full",
+      "n": 10,
+      "labels": {
+        "minimal-like": 5,
+        "ambiguous": 5
+      },
+      "firstTokens": "Wex5 Interesting,x2 Interestingx2 Interesting:x1",
+      "avg": {
+        "we": "1.2",
+        "letMe": "0.1",
+        "lets": "0.9",
+        "marker": 0
+      },
+      "toolNames": [
+        "bash",
+        "glob",
+        "bash",
+        "read",
+        "bash",
+        "glob",
+        "read",
+        "bash",
+        "glob",
+        "read",
+        "bash",
+        "bash",
+        "glob",
+        "bash",
+        "bash",
+        "glob"
+      ],
+      "runs": [
+        {
+          "classification": "minimal-like",
+          "score": 5,
+          "metrics": {
+            "chars": 126,
+            "we": 1,
+            "letMe": 0,
+            "lets": 1,
+            "i": 0,
+            "firstToken": "We",
+            "markerFirstLine": false,
+            "visibleBeforeTool": false
+          },
+          "finishReason": "tool_calls",
+          "toolNames": [
+            "bash",
+            "glob"
+          ],
+          "inputTokens": 737,
+          "outputTokens": 112
+        },
+        {
+          "classification": "ambiguous",
+          "score": -2,
+          "metrics": {
+            "chars": 525,
+            "we": 2,
+            "letMe": 1,
+            "lets": 2,
+            "i": 0,
+            "firstToken": "Interesting,",
+            "markerFirstLine": false,
+            "visibleBeforeTool": false
+          },
+          "finishReason": "tool_calls",
+          "toolNames": [
+            "bash",
+            "read"
+          ],
+          "inputTokens": 1559,
+          "outputTokens": 197,
+          "phase": "promoted"
+        },
+        {
+          "classification": "minimal-like",
+          "score": 5,
+          "metrics": {
+            "chars": 75,
+            "we": 1,
+            "letMe": 0,
+            "lets": 1,
+            "i": 0,
+            "firstToken": "We",
+            "markerFirstLine": false,
+            "visibleBeforeTool": false
+          },
+          "finishReason": "tool_calls",
+          "toolNames": [
+            "bash",
+            "glob"
+          ],
+          "inputTokens": 737,
+          "outputTokens": 95
+        },
+        {
+          "classification": "ambiguous",
+          "score": 0,
+          "metrics": {
+            "chars": 153,
+            "we": 0,
+            "letMe": 0,
+            "lets": 1,
+            "i": 0,
+            "firstToken": "Interesting:",
+            "markerFirstLine": false,
+            "visibleBeforeTool": false
+          },
+          "finishReason": "tool_calls",
+          "toolNames": [
+            "read"
+          ],
+          "inputTokens": 1542,
+          "outputTokens": 77,
+          "phase": "promoted"
+        },
+        {
+          "classification": "minimal-like",
+          "score": 5,
+          "metrics": {
+            "chars": 207,
+            "we": 3,
+            "letMe": 0,
+            "lets": 1,
+            "i": 0,
+            "firstToken": "We",
+            "markerFirstLine": false,
+            "visibleBeforeTool": false
+          },
+          "finishReason": "tool_calls",
+          "toolNames": [
+            "bash",
+            "glob"
+          ],
+          "inputTokens": 737,
+          "outputTokens": 124
+        },
+        {
+          "classification": "ambiguous",
+          "score": 2,
+          "metrics": {
+            "chars": 271,
+            "we": 1,
+            "letMe": 0,
+            "lets": 0,
+            "i": 0,
+            "firstToken": "Interesting,",
+            "markerFirstLine": false,
+            "visibleBeforeTool": false
+          },
+          "finishReason": "tool_calls",
+          "toolNames": [
+            "read"
+          ],
+          "inputTokens": 1571,
+          "outputTokens": 98,
+          "phase": "promoted"
+        },
+        {
+          "classification": "minimal-like",
+          "score": 5,
+          "metrics": {
+            "chars": 71,
+            "we": 1,
+            "letMe": 0,
+            "lets": 0,
+            "i": 0,
+            "firstToken": "We",
+            "markerFirstLine": false,
+            "visibleBeforeTool": false
+          },
+          "finishReason": "tool_calls",
+          "toolNames": [
+            "bash"
+          ],
+          "inputTokens": 737,
+          "outputTokens": 65
+        },
+        {
+          "classification": "ambiguous",
+          "score": 0,
+          "metrics": {
+            "chars": 220,
+            "we": 0,
+            "letMe": 0,
+            "lets": 2,
+            "i": 0,
+            "firstToken": "Interesting",
+            "markerFirstLine": false,
+            "visibleBeforeTool": false
+          },
+          "finishReason": "tool_calls",
+          "toolNames": [
+            "bash",
+            "glob"
+          ],
+          "inputTokens": 1491,
+          "outputTokens": 137,
+          "phase": "promoted"
+        },
+        {
+          "classification": "minimal-like",
+          "score": 5,
+          "metrics": {
+            "chars": 72,
+            "we": 2,
+            "letMe": 0,
+            "lets": 1,
+            "i": 0,
+            "firstToken": "We",
+            "markerFirstLine": false,
+            "visibleBeforeTool": false
+          },
+          "finishReason": "tool_calls",
+          "toolNames": [
+            "bash"
+          ],
+          "inputTokens": 737,
+          "outputTokens": 97
+        },
+        {
+          "classification": "ambiguous",
+          "score": 2,
+          "metrics": {
+            "chars": 174,
+            "we": 1,
+            "letMe": 0,
+            "lets": 0,
+            "i": 0,
+            "firstToken": "Interesting",
+            "markerFirstLine": false,
+            "visibleBeforeTool": false
+          },
+          "finishReason": "tool_calls",
+          "toolNames": [
+            "bash",
+            "glob"
+          ],
+          "inputTokens": 1523,
+          "outputTokens": 141,
+          "phase": "promoted"
+        }
+      ]
+    }
+  ]
+}
