@@ -240,6 +240,81 @@ async function callVisionChat(ctx, baseURL, apiKey, model, imageBase64, prefix, 
 }
 // ── 插件主体 ────────────────────────────────────────────
 export function apply(ctx, config) {
+    // ═══ 生图能力（自 dsh-image-gen 合并；模型配置存 model-router.json 的 imageActive）═══
+    let imageActive = '';
+    async function loadImageConfig() {
+        try {
+            const target = await ctx.fs.resolve(config.modelRouterPath || '.dsh/model-router.json');
+            const parsed = JSON.parse(await ctx.fs.readText(target));
+            if (parsed && typeof parsed.imageActive === 'string')
+                imageActive = parsed.imageActive;
+            if (!imageActive && Array.isArray(parsed?.image) && parsed.image.length > 0) {
+                imageActive = parsed.image[0].provider + '/' + parsed.image[0].model;
+            }
+        }
+        catch { /* 无配置 */ }
+    }
+    async function saveImageActive(key) {
+        const target = await ctx.fs.resolve(config.modelRouterPath || '.dsh/model-router.json');
+        let parsed = {};
+        try {
+            parsed = JSON.parse(await ctx.fs.readText(target));
+        }
+        catch { /* 无文件则新建 */ }
+        const list = Array.isArray(parsed.image) ? parsed.image : [];
+        const parts = splitKey(key);
+        if (parts && !list.some((item) => item.provider === parts.provider && item.model === parts.model)) {
+            list.push({ provider: parts.provider, model: parts.model });
+        }
+        const next = { ...parsed, image: list, imageActive: key };
+        await ctx.fs.writeText(target, JSON.stringify(next, null, 2));
+        imageActive = key;
+    }
+    async function generateViaHttp(active, prompt, signal) {
+        const profile = providerConfig(ctx, active.provider);
+        if (!profile || typeof profile.baseURL !== 'string' || !profile.baseURL) {
+            return { ok: false, error: `provider "${active.provider}" 未配置 baseURL` };
+        }
+        const apiKey = await resolveApiKey(ctx, profile);
+        if (!apiKey) {
+            return { ok: false, error: `未找到生图 API 凭据（${profile.apiKeyEnv || '未知 env'}）：请在凭据设置中配置。` };
+        }
+        const base = String(profile.baseURL).replace(/[\\/]+$/, '');
+        const safePrompt = String(prompt).replace(/'/g, "''");
+        const command = "$ErrorActionPreference = 'Stop'; [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12; try { $b = @{ model = '" + active.model + "'; prompt = '" + safePrompt + "'; n = 1 } | ConvertTo-Json -Compress; $r = Invoke-RestMethod -UseBasicParsing -Uri '" + base + "/images/generations' -Method Post -Headers @{ Authorization = 'Bearer " + apiKey + "'; 'Content-Type' = 'application/json' } -Body $b -TimeoutSec 300; @{ ok = $true; data = @($r.data) } | ConvertTo-Json -Depth 6 -Compress } catch { $inner = ''; if ($_.Exception.InnerException) { $inner = $_.Exception.InnerException.Message }; @{ ok = $false; error = $_.Exception.Message; inner = $inner; ps = $PSVersionTable.PSVersion.ToString() } | ConvertTo-Json -Compress }";
+        try {
+            const policy = ctx.sandboxPolicy.resolve({ mode: 'danger-full-access' });
+            const spec = ctx.shell.resolve({ command, timeoutMs: 320000, signal, sandboxPolicy: policy });
+            const result = await ctx.shell.run(spec);
+            const stdout = result.stdout && result.stdout.text ? result.stdout.text : '';
+            const stderr = result.stderr && result.stderr.text ? result.stderr.text : '';
+            if (result.exitCode !== 0) {
+                return { ok: false, error: `生图 API 调用失败 (exit ${result.exitCode}): ${(stderr || stdout || '未知错误').slice(0, 500)}` };
+            }
+            let parsed = null;
+            try {
+                parsed = JSON.parse(stdout);
+            }
+            catch {
+                return { ok: false, error: '生图 API 响应解析失败: ' + stdout.slice(0, 400) };
+            }
+            if (!parsed || parsed.ok !== true) {
+                return { ok: false, error: '生图 API 错误: ' + JSON.stringify(parsed).slice(0, 500) };
+            }
+            const item = parsed.data && parsed.data[0];
+            if (!item)
+                return { ok: false, error: '生图 API 返回空结果' };
+            return {
+                ok: true,
+                model: `${active.provider}/${active.model}`,
+                imageUrl: item.url || null,
+                imageDataUrl: item.b64_json ? 'data:image/png;base64,' + item.b64_json : null,
+            };
+        }
+        catch (error) {
+            return { ok: false, error: '生图 API 调用异常: ' + String(error?.message ?? error) };
+        }
+    }
     async function describe(imageArg, promptArg, signal) {
         const { prefix, base64, ref } = await resolveImageData(ctx, imageArg);
         const prompt = String(promptArg || '').trim() || config.defaultPrompt;
@@ -308,6 +383,29 @@ export function apply(ctx, config) {
             return describe(String(args.image), args.prompt, exec?.signal);
         },
     })), '@dsh-external/dsh-vision-helper: vision_describe');
+    // generate_image：生图工具（自 dsh-image-gen 合并）
+    ctx.effect(() => ctx.tools.register(defineTool({
+        name: 'generate_image',
+        description: '调用已配置的生图模型生成一张图片。当用户要求生成、绘制、创建图片或图像时使用本工具，提示词越详细越好。若返回 ok=false，请把 error 信息转告用户（生图模型在「设置 → AI 模型」中配置）。',
+        parameters: {
+            prompt: {
+                type: 'string',
+                required: true,
+                description: '详细的图片生成提示词，建议包含主体、风格、场景、构图、光线等细节。',
+            },
+        },
+        output: {
+            schema: { type: 'json' },
+            render: (_args, value) => [{ type: 'text', text: JSON.stringify(value, null, 2) }],
+        },
+        async execute(args, exec) {
+            const active = splitKey(imageActive);
+            if (!active) {
+                return { ok: false, error: '尚未配置生图模型：请在「设置 → AI 模型」中选择生图模型。' };
+            }
+            return generateViaHttp(active, String(args.prompt), exec?.signal);
+        },
+    })), '@dsh-external/dsh-vision-helper: generate_image');
     // 模型配置快照：webServer 只读接口（供设置页 / 排查）
     ctx.effect(() => {
         const webServer = ctx.webServer;
@@ -424,5 +522,61 @@ export function apply(ctx, config) {
             },
         });
     });
+    // ── 生图接口（兼容原 /api/image-gen/* 路径，AI 模型页生图区块依赖）──
+    ctx.effect(() => {
+        const webServer = ctx.webServer;
+        if (!webServer)
+            return;
+        return webServer.register({
+            kind: 'exact',
+            path: '/api/image-gen/snapshot',
+            handler: async (_req, res) => {
+                try {
+                    const providers = [];
+                    for (const info of ctx.llm.listProviders()) {
+                        let models = [];
+                        try {
+                            models = await ctx.llm.listModels(info.id);
+                        }
+                        catch { /* 无发现 */ }
+                        providers.push({
+                            id: info.id,
+                            name: info.name,
+                            models: models.map((m) => ({ id: m.id, name: m.name || m.id })),
+                        });
+                    }
+                    jsonResponse(res, 200, { ok: true, providers, imageActive });
+                }
+                catch (error) {
+                    jsonResponse(res, 500, { ok: false, error: String(error?.message ?? error) });
+                }
+            },
+        });
+    });
+    ctx.effect(() => {
+        const webServer = ctx.webServer;
+        if (!webServer)
+            return;
+        return webServer.register({
+            kind: 'exact',
+            path: '/api/image-gen/config',
+            handler: async (req, res) => {
+                try {
+                    if (req.method !== 'POST')
+                        return jsonResponse(res, 405, { ok: false, error: 'method not allowed' });
+                    const body = await readBody(req);
+                    const key = body && typeof body.imageActive === 'string' ? body.imageActive : '';
+                    if (!splitKey(key))
+                        return jsonResponse(res, 400, { ok: false, error: 'imageActive 须为 provider/model 格式' });
+                    await saveImageActive(key);
+                    jsonResponse(res, 200, { ok: true, imageActive: key });
+                }
+                catch (error) {
+                    jsonResponse(res, 500, { ok: false, error: String(error?.message ?? error) });
+                }
+            },
+        });
+    });
+    void loadImageConfig();
 }
 //# sourceMappingURL=index.js.map
