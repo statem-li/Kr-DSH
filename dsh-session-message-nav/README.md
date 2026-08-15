@@ -4,11 +4,12 @@ DeepSeek Harness Web GUI 客户端插件：会话内快速查看/定位自己发
 
 ## 功能
 
-1. **头部右上角「消息 N」按钮**
-   - 点击弹出本会话全部已发送消息列表（含运行中插入的 steering 消息），
-     按时间正序，显示序号 / 时间 / 内容预览（两行截断）。
-   - 点击某条消息 → 会话自动滚动到该消息，并高亮闪烁 2.4 秒。
-   - 历史未加载完时会话（`hasMore`）底部提供「加载更早」按钮。
+1. **右上角消息数量徽标**（与「对话/轨迹」标签页同行，靠右）
+   - 只显示本会话已发送消息总数（蓝色圆形徽标），随新消息实时 +1；
+   - 点击展开消息列表：按时间正序，显示序号 / 时间 / 内容预览（两行截断）；
+   - 点击某条消息 → 会话自动滚动到该消息，并高亮闪烁 2.4 秒；
+   - **自动加载更早消息**：只要还有未加载历史（`hasMore`）就自动连续加载
+     直到全部加载完，无需手动点击（带防死循环保护）；
    - 列表随会话实时更新（新消息到达自动出现）。
 
 2. **右侧中间「消息横条」**（透明无背景，只显示横条本身）
@@ -29,19 +30,29 @@ npm run build        # host: src/ → lib/
 npm run build:client # client: → lib/client.js
 ```
 
-## 注入
+## 装配（官方方式，随 profile 启动加载）
 
-```bash
-# 运行时注入（免重启；junction + loader.create，dev 工具链）
-# dev_inject_plugin D:/AI/Dsh/dsh-session-message-nav
-# 然后刷新 Web GUI 页面（新 client bundle 经 __DSH_BOOT__ 图装配）
-```
+不依赖注入器，直接加入 web profile：
+
+1. `~/.dsh/profiles/web/cordis.patch.yml` 追加：
+   ```yaml
+   - insert:
+       - id: dsh-session-message-nav
+         name: "@dsh-external/dsh-session-message-nav"
+   ```
+2. `~/.dsh/profiles/web/package.json` 的 dependencies 加入：
+   ```json
+   "@dsh-external/dsh-session-message-nav": "link:D:/AI/Dsh/dsh-session-message-nav"
+   ```
+3. 重启 DeepSeek Harness 应用，刷新 Web GUI 页面。
+
+（调试期也可用 dev 注入链：junction + loader.create，免重启。）
 
 ## 结构
 
 - `src/index.ts` — host 半身（占位；loader 挂载 + client bundle 发现用）
 - `src/client/index.ts` — 注册 `conversation.session.header.utilities` 槽位（右上角）
-- `src/client/SessionMessageNav.tsx` — 消息列表弹窗 + 右侧消息横条 UI
+- `src/client/SessionMessageNav.tsx` — 消息数量徽标/弹窗 + 右侧消息横条 UI
 - `src/client/styles.ts` — 运行时注入样式（`--dsw-alias-*` 主题令牌）
 - `tsdown.config.ts` — host/client 双 bundle（client 平台外部依赖走模块表）
 
