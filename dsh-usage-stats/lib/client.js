@@ -41,8 +41,7 @@ window.__ModuleLoader__.load({
 			".usg_headerActions{align-items:center;gap:2px;display:flex}",
 			".usg_iconButton{cursor:pointer;width:26px;height:26px;color:var(--dsw-alias-label-tertiary);background:0 0;border:none;border-radius:6px;justify-content:center;align-items:center;padding:0;display:inline-flex}",
 			".usg_iconButton:hover{color:var(--dsw-alias-label-secondary);background:var(--dsw-alias-interactive-bg-hover)}",
-			".usg_body{flex:1;min-height:0;padding:4px 14px 14px;overflow-y:auto;scrollbar-width:none;-ms-overflow-style:none}",
-			".usg_body::-webkit-scrollbar{display:none}",
+			".usg_body{flex:1;min-height:0;padding:4px 14px 14px;overflow-y:auto}",
 			".usg_section{margin-top:12px}",
 			".usg_sectionTitle{color:var(--dsw-alias-label-tertiary);font-size:11px;line-height:16px;margin:0 0 6px}",
 			".usg_note{color:var(--dsw-alias-label-tertiary);margin:4px 0;font-size:12px;line-height:18px}",
@@ -88,8 +87,7 @@ window.__ModuleLoader__.load({
 			".usg_statLabel{color:var(--dsw-alias-label-tertiary);font-size:11px;line-height:16px}",
 			".usg_hitCaption{color:var(--dsw-alias-label-tertiary);margin-top:6px;font-size:11px;line-height:16px;font-variant-numeric:tabular-nums}",
 			".usg_hitCaption b{color:var(--dsw-alias-label-secondary);font-weight:600}",
-			".usg_heat{overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none}",
-			".usg_heat::-webkit-scrollbar{display:none}",
+			".usg_heat{overflow-x:auto}",
 			".usg_heatHeader{justify-content:space-between;align-items:center;margin-bottom:6px;display:flex}",
 			".usg_heatHeader .usg_sectionTitle{flex:none;margin:0}",
 			".usg_monthNav{align-items:center;gap:2px;display:flex}",
@@ -464,8 +462,6 @@ window.__ModuleLoader__.load({
 			const mountedRef = react.useRef(true);
 			const usageLoaderRef = react.useRef(null);
 			const accountLoaderRef = react.useRef(null);
-			const layerRef = react.useRef(null);
-			const [panelLeft, setPanelLeft] = react.useState(null);
 			if (usageLoaderRef.current === null) usageLoaderRef.current = createLoader();
 			if (accountLoaderRef.current === null) accountLoaderRef.current = createLoader();
 			const providerChoices = react.useMemo(() => buildProviderChoices(providers), [providers]);
@@ -534,23 +530,6 @@ window.__ModuleLoader__.load({
 					mountedRef.current = false;
 				};
 			}, []);
-
-			react.useEffect(() => {
-				if (!open) return;
-				// Anchor the panel to the right edge of the sidebar entry itself:
-				// measure the live position so dragging the sidebar width keeps it snug.
-				if (layerRef.current !== null) {
-					const rect = layerRef.current.getBoundingClientRect();
-					setPanelLeft(Math.max(8, rect.right + 12));
-				}
-				const onResize = () => {
-					if (layerRef.current === null) return;
-					const rect = layerRef.current.getBoundingClientRect();
-					setPanelLeft(Math.max(8, rect.right + 12));
-				};
-				window.addEventListener("resize", onResize);
-				return () => window.removeEventListener("resize", onResize);
-			}, [open]);
 
 			// Keep exactly one valid provider selected across independent provider
 			// and subscription responses. DeepSeek remains the initial preference.
@@ -671,13 +650,11 @@ window.__ModuleLoader__.load({
 			});
 
 			return react_jsx_runtime.jsxs("div", {
-				ref: layerRef,
 				className: wide ? S.layer : `${S.layer} ${S.rail}`,
 				children: [
 					open && react_jsx_runtime.jsxs("section", {
 						className: closing ? `${S.panel} ${S.panelClosing}` : S.panel,
 						onAnimationEnd: handlePanelAnimationEnd,
-						style: { left: panelLeft },
 						"data-usage-stats-panel": true,
 						"aria-label": translate("panel.title"),
 						children: [
@@ -1271,8 +1248,8 @@ window.__ModuleLoader__.load({
 
 		/**
 		 * Year overview: one cell per month, colored by that month's total
-		 * tokens against the year's busiest month. Clicking a cell drills into
-		 * that month's calendar view.
+		 * tokens against the year's busiest month, with a year-total summary
+		 * line on top. Clicking a cell drills into that month's calendar view.
 		 */
 		function YearHeatmap({ yearHeat, viewYear, translate, onSelectMonth }) {
 			const select = typeof onSelectMonth === "function" ? onSelectMonth : () => {};
@@ -1294,24 +1271,24 @@ window.__ModuleLoader__.load({
 					react_jsx_runtime.jsx("div", {
 						className: S.yearGrid,
 						children: yearHeat.months.map((entry) => {
-						const isCurrent = viewYear === currentYear && entry.month === currentMonth;
-						const isFuture = viewYear === currentYear && entry.month > currentMonth;
-						const style = cellColor(entry.tokens, yearHeat.max);
-						return react_jsx_runtime.jsx("button", {
-							type: "button",
-							className: S.yearCell,
-							"data-current": isCurrent || undefined,
-							disabled: isFuture,
-							style: { background: style.background, color: style.color },
-							title: `${viewYear} ${names[entry.month]} · ${fmt(entry.tokens)} tokens`,
-							"aria-label": `${viewYear} ${names[entry.month]} · ${fmt(entry.tokens)} tokens`,
-							onClick: () => select(`${viewYear}-${String(entry.month + 1).padStart(2, "0")}`),
-							children: [
-								react_jsx_runtime.jsx("span", { className: S.yearName, children: names[entry.month] }),
-								react_jsx_runtime.jsx("span", { className: S.yearTokens, children: fmtCompact(entry.tokens) })
-							]
-						}, entry.month);
-					})
+							const isCurrent = viewYear === currentYear && entry.month === currentMonth;
+							const isFuture = viewYear === currentYear && entry.month > currentMonth;
+							const style = cellColor(entry.tokens, yearHeat.max);
+							return react_jsx_runtime.jsx("button", {
+								type: "button",
+								className: S.yearCell,
+								"data-current": isCurrent || undefined,
+								disabled: isFuture,
+								style: { background: style.background, color: style.color },
+								title: `${viewYear} ${names[entry.month]} · ${fmt(entry.tokens)} tokens`,
+								"aria-label": `${viewYear} ${names[entry.month]} · ${fmt(entry.tokens)} tokens`,
+								onClick: () => select(`${viewYear}-${String(entry.month + 1).padStart(2, "0")}`),
+								children: [
+									react_jsx_runtime.jsx("span", { className: S.yearName, children: names[entry.month] }),
+									react_jsx_runtime.jsx("span", { className: S.yearTokens, children: fmtCompact(entry.tokens) })
+								]
+							}, entry.month);
+						})
 					})
 				]
 			});
