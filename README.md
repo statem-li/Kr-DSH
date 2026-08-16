@@ -1,63 +1,44 @@
-# dsh-image-gen —— DSH 生图插件
+# Kr-DSH —— DeepSeek Harness 外部插件集合
 
-为 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 提供生图能力：注册 generate_image 工具，当对话模型要求生成图片时，自动调用你配置的生图模型（OpenAI 兼容 images/generations 接口）出图。
+为 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness)（DSH）开发的**外部插件集合**。全部插件通过 DSH 的 profile 插件机制（bundle / insert 行）安装，不改动 DSH 源码。
 
-## 功能
+## 插件列表
 
-- **generate_image 工具**：模型在对话中直接调用，提示词 → 生图模型 → 返回图片 URL
-- **设置页「生图模型」**：选择当前生图模型（支持多个 provider / 模型切换）
-- **配置持久化**：生图模型选择保存在工作区 .dsh/model-router.json（imageActive 字段）
-- **自动读取 provider 配置**：复用 DSH 的 provider 配置（aseURL / piKeyEnv）与凭据库，无需重复填写 API Key
+| 插件 | 说明 |
+|------|------|
+| **[dsh-usage-skill](dsh-usage-skill/)** | 用量统计（Token 热力图、供应商余额）+ 技能管理面板（Bundle 分组、技能文件查看器、zip/目录导入、归入/移出/删除） |
+| **[dsh-browser](dsh-browser/)** | AI 浏览器操作：CDP 直连 Chrome，文本 snapshot+ref 主感知，截图走辅助视觉兜底 |
+| **[dsh-vision-helper](dsh-vision-helper/)** | 辅助视觉模型：图片→文本描述，供文本模型、浏览器截图兜底与聊天贴图降级使用 |
+| **[dsh-session-message-nav](dsh-session-message-nav/)** | 会话消息导航：头部「消息」弹窗列出本会话全部已发送消息（点击滚动定位）+ 右侧滚动齿轮（每节悬停预览对话内容、点击/拖动跳转） |
+| **[dsh-zh-thinking](dsh-zh-thinking/)** | 中文思考开关：设置页开关，引导模型用中文进行内部思考 |
+| **[dsh-router-standard](dsh-router-standard/)** | Task-aware reasoning-mode router：三档行为带（spec / mixed / react）、persona 与首轮工具注入、agent 可调 |
 
 ## 安装
 
-1. 将 dsh-image-gen 目录复制到 DSH profile 的插件目录：
+### 方式一：link 安装（开发/常用）
 
-   `ash
-   # Windows web profile 示例
-   cp -r dsh-image-gen ~/.dsh/profiles/web/plugins/
-   `
+把插件目录放到本地，然后在 web profile 中 link：
 
-2. 在 profile 的 cordis.patch.yml 追加挂载声明：
+```powershell
+# 示例：安装 dsh-usage-skill
+cd C:\Users\Anti\.dsh\profiles\web
+pnpm add "link:D:\AI\Dsh\kr-dsh-upload\repo\dsh-usage-skill"
+```
 
-   `yaml
-   - insert:
-       - id: dsh-image-gen
-         name: dsh-image-gen
-   `
+bundle 插件加入 `dsh.profile.bundles` 层栈后重启 dsh web 生效；非 bundle 插件写 insert 行，配置 HMR 实时挂载。
 
-3. 重启 DSH。
+### 方式二：从 GitHub 安装
 
-## 配置生图模型
+```powershell
+dsh plugin --profile web add "github:statem-li/Kr-DSH#main&path:/dsh-usage-skill"
+```
 
-方式一：设置 → **生图模型** 页面选择（下拉或列表按钮）。
+> 注：Windows 下 `&` 会被 cmd 当作命令分隔符，若遇到解析错误，可在 profile 目录直接执行 `pnpm add "github:statem-li/Kr-DSH#main&path:/dsh-usage-skill"`，再把包名手动加入 `dsh.profile.bundles` 层栈后重启。
 
-方式二：直接编辑工作区 .dsh/model-router.json：
+## 说明
 
-`json
-{
-  "image": [{ "provider": "sensenova", "model": "sensenova-u1-fast" }],
-  "imageActive": "sensenova/sensenova-u1-fast"
-}
-`
-
-生图插件从 DSH 的 provider 配置（llm 可配置 provider 目录）读取 aseURL 与 piKeyEnv，API Key 从 DSH 凭据库解析（如 .credentials.yaml 中的 SENSENOVA_API_KEY）。
-
-## 生图调用
-
-generate_image 工具通过 PowerShell Invoke-RestMethod 调用 {baseURL}/images/generations（强制 TLS 1.2、danger-full-access 沙箱策略），响应返回：
-
-`json
-{
-  "ok": true,
-  "model": "sensenova/sensenova-u1-fast",
-  "imageUrl": "https://.../xxx.png",
-  "imageDataUrl": null
-}
-`
-
-- 图片 URL 为预签名地址，通常 24 小时内有效
-- 生图耗时约 1 分钟（取决于模型），工具超时上限 5 分钟
+- 各插件均为独立目录，可单独安装使用
+- 详细用法见各插件目录内 README
 
 ## 许可
 
