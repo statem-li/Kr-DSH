@@ -26,6 +26,7 @@ window.__ModuleLoader__.load({
 			itemText: "smn-item-text",
 			loadOlder: "smn-load-older",
 			panel: "smn-panel",
+			scroller: "smn-scroller",
 			row: "smn-row",
 			bar: "smn-bar",
 			barActive: "smn-bar-active",
@@ -55,10 +56,9 @@ window.__ModuleLoader__.load({
 .smn-load-older{margin:4px 6px 2px;padding:6px 10px;border:1px dashed var(--dsw-alias-border-l2,#333);border-radius:8px;background:transparent;color:var(--dsw-alias-label-secondary,#bbb);font-size:11px;cursor:pointer}
 .smn-load-older:hover{border-color:var(--dsw-alias-state-business-primary,#4a9eff);color:var(--dsw-alias-state-business-primary,#4a9eff)}
 .smn-load-older:disabled{opacity:.5;cursor:default}
-/* 无背景面板：只显示横条本身 */
-.smn-panel{position:fixed;z-index:1100;display:flex;flex-direction:column;gap:2px;padding:6px 8px;overflow-y:auto;overscroll-behavior:contain;cursor:default;touch-action:none;user-select:none;background:transparent}
-.smn-panel::-webkit-scrollbar{width:4px}
-.smn-panel::-webkit-scrollbar-thumb{background:rgba(128,128,128,.35);border-radius:2px}
+/* 无背景面板：只显示横条本身；无滚动条（超出由滚轮平滑滚动） */
+.smn-panel{position:fixed;z-index:1100;padding:6px 8px;overflow:hidden;cursor:default;touch-action:none;user-select:none;background:transparent}
+.smn-scroller{display:flex;flex-direction:column;gap:2px;will-change:transform}
 /* 每行固定高度（18px）：横条紧凑排列 */
 .smn-row{width:100%;height:18px;display:flex;align-items:center;justify-content:flex-end;flex:0 0 auto}
 /* 横条：15px 宽细短线，无文字；不在阅读位置 = 灰色（15px），
@@ -112,7 +112,8 @@ window.__ModuleLoader__.load({
 		*  - [data-composer-seat] — 底部粘贴输入区
 		*/
 		const PANEL_WIDTH = 196;
-		const PANEL_ROW_HEIGHT = 18;
+		/** 行高估算（18px 行 + 2px 间距），用于面板高度计算。 */
+		const PANEL_ROW_HEIGHT = 20;
 		const PANEL_PADDING = 16;
 		/** 数量徽标按钮的宽度估算（右对齐定位用）。 */
 		const BUTTON_WIDTH = 44;
@@ -182,12 +183,16 @@ window.__ModuleLoader__.load({
 			const snapshot = useSession((s) => s);
 			const hostRef = (0, react.useRef)(null);
 			const panelRef = (0, react.useRef)(null);
+			const scrollerRef = (0, react.useRef)(null);
 			const wrapRef = (0, react.useRef)(null);
 			const [open, setOpen] = (0, react.useState)(false);
 			const [buttonPos, setButtonPos] = (0, react.useState)(null);
 			const [panelPos, setPanelPos] = (0, react.useState)(null);
 			const [activeKey, setActiveKey] = (0, react.useState)(null);
 			const measureRef = (0, react.useRef)(() => {});
+			const scrollPosRef = (0, react.useRef)(0);
+			const scrollTargetRef = (0, react.useRef)(0);
+			const scrollRafRef = (0, react.useRef)(0);
 			const dragRef = (0, react.useRef)(null);
 			const userMessages = (0, react.useMemo)(() => {
 				const chat = snapshot?.chat;
@@ -263,12 +268,12 @@ window.__ModuleLoader__.load({
 				const buttonX = sr.left + scrollport.clientWidth - BUTTON_WIDTH - 12;
 				const tablist = (hostRef.current?.closest("[data-phase]"))?.querySelector("[role=\"tablist\"]");
 				const tabRect = tablist instanceof HTMLElement ? tablist.getBoundingClientRect() : null;
-				const buttonY = tabRect !== null && tabRect.height > 0 ? tabRect.top + Math.max(0, (tabRect.height - 28) / 2) - 4 : sr.top + 10;
+				const buttonY = tabRect !== null && tabRect.height > 0 ? tabRect.top + Math.max(0, (tabRect.height - 28) / 2) + 28 : sr.top + 10;
 				setButtonPos((prev) => prev !== null && Math.abs(prev.x - buttonX) < .5 && Math.abs(prev.y - buttonY) < .5 ? prev : {
 					x: buttonX,
 					y: buttonY
 				});
-				const panelHeight = clamp(bars.length * PANEL_ROW_HEIGHT + PANEL_PADDING, 56, sr.height - 24);
+				const panelHeight = clamp(bars.length * PANEL_ROW_HEIGHT + PANEL_PADDING, 56, 216);
 				const x = sr.left + scrollport.clientWidth - PANEL_WIDTH - 12;
 				const y = sr.top + Math.max(24, (sr.height - panelHeight) / 2);
 				setPanelPos((prev) => prev !== null && Math.abs(prev.x - x) < .5 && Math.abs(prev.y - y) < .5 ? prev : {
@@ -340,6 +345,68 @@ window.__ModuleLoader__.load({
 			(0, react.useEffect)(() => () => {
 				dragRef.current = null;
 			}, []);
+			const applyScroll = (0, react.useCallback)((target, smooth) => {
+				const panel = panelRef.current;
+				const scroller = scrollerRef.current;
+				if (panel === null || scroller === null) return;
+				const t = clamp(target, 0, Math.max(0, scroller.scrollHeight - panel.clientHeight));
+				scrollTargetRef.current = t;
+				if (!smooth) {
+					scrollPosRef.current = t;
+					scroller.style.transform = `translateY(${-t}px)`;
+					if (scrollRafRef.current !== 0) cancelAnimationFrame(scrollRafRef.current);
+					scrollRafRef.current = 0;
+					return;
+				}
+				if (scrollRafRef.current !== 0) return;
+				const tick = () => {
+					const s = scrollerRef.current;
+					if (s === null) {
+						scrollRafRef.current = 0;
+						return;
+					}
+					const pos = scrollPosRef.current;
+					const goal = scrollTargetRef.current;
+					const next = pos + (goal - pos) * .18;
+					if (Math.abs(goal - next) < .5) {
+						scrollPosRef.current = goal;
+						s.style.transform = `translateY(${-goal}px)`;
+						scrollRafRef.current = 0;
+						return;
+					}
+					scrollPosRef.current = next;
+					s.style.transform = `translateY(${-next}px)`;
+					scrollRafRef.current = requestAnimationFrame(tick);
+				};
+				scrollRafRef.current = requestAnimationFrame(tick);
+			}, []);
+			(0, react.useEffect)(() => {
+				const panel = panelRef.current;
+				if (panel === null) return;
+				const onWheel = (event) => {
+					const scroller = scrollerRef.current;
+					if (scroller === null) return;
+					if (Math.max(0, scroller.scrollHeight - panel.clientHeight) <= 0) {
+						scrollPosRef.current = 0;
+						scrollTargetRef.current = 0;
+						return;
+					}
+					event.preventDefault();
+					applyScroll(scrollTargetRef.current + event.deltaY, true);
+				};
+				panel.addEventListener("wheel", onWheel, { passive: false });
+				return () => {
+					panel.removeEventListener("wheel", onWheel);
+					if (scrollRafRef.current !== 0) cancelAnimationFrame(scrollRafRef.current);
+					scrollRafRef.current = 0;
+					scrollPosRef.current = 0;
+					scrollTargetRef.current = 0;
+				};
+			}, [
+				panelPos,
+				bars.length,
+				applyScroll
+			]);
 			(0, react.useEffect)(() => {
 				if (activeKey === null || panelRef.current === null) return;
 				const panel = panelRef.current;
@@ -349,8 +416,12 @@ window.__ModuleLoader__.load({
 					break;
 				}
 				if (row === null) return;
-				panel.scrollTop = clamp(row.offsetTop - (panel.clientHeight - row.offsetHeight) / 2, 0, Math.max(0, panel.scrollHeight - panel.clientHeight));
-			}, [activeKey, bars.length]);
+				applyScroll(row.offsetTop - (panel.clientHeight - row.offsetHeight) / 2, true);
+			}, [
+				activeKey,
+				bars.length,
+				applyScroll
+			]);
 			const onPanelPointerDown = (event) => {
 				if (event.target instanceof HTMLElement && event.target.closest("button") !== null) return;
 				const scrollport = scrollportOf();
@@ -495,23 +566,27 @@ window.__ModuleLoader__.load({
 						left: panelPos.x,
 						top: panelPos.y,
 						width: PANEL_WIDTH,
-						height: clamp(bars.length * PANEL_ROW_HEIGHT + PANEL_PADDING, 56, window.innerHeight - 48)
+						height: clamp(bars.length * PANEL_ROW_HEIGHT + PANEL_PADDING, 56, 216)
 					},
 					onPointerDown: onPanelPointerDown,
 					onPointerMove: onPanelPointerMove,
 					onPointerUp: onPanelPointerUp,
-					children: bars.map((bar) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-						"data-bar-key": bar.key,
-						className: css.row,
-						children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-							type: "button",
-							className: [css.bar, bar.key === activeKey ? css.barActive : ""].filter(Boolean).join(" "),
-							"aria-label": `跳转到我的第 ${bar.index + 1} 条消息`,
-							onClick: () => {
-								jumpTo(bar.key);
-							}
-						})
-					}, bar.key))
+					children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+						ref: scrollerRef,
+						className: css.scroller,
+						children: bars.map((bar) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+							"data-bar-key": bar.key,
+							className: css.row,
+							children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+								type: "button",
+								className: [css.bar, bar.key === activeKey ? css.barActive : ""].filter(Boolean).join(" "),
+								"aria-label": `跳转到我的第 ${bar.index + 1} 条消息`,
+								onClick: () => {
+									jumpTo(bar.key);
+								}
+							})
+						}, bar.key))
+					})
 				}), document.body)]
 			});
 		}

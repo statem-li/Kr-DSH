@@ -52,8 +52,11 @@ interface ButtonPos {
 }
 
 const PANEL_WIDTH = 196
-const PANEL_ROW_HEIGHT = 18
+/** 行高估算（18px 行 + 2px 间距），用于面板高度计算。 */
+const PANEL_ROW_HEIGHT = 20
 const PANEL_PADDING = 16
+/** 面板默认最多同时显示的横条数（超出由滚轮平滑滚动）。 */
+const MAX_VISIBLE_ROWS = 10
 /** 数量徽标按钮的宽度估算（右对齐定位用）。 */
 const BUTTON_WIDTH = 44
 
@@ -128,12 +131,17 @@ export function SessionMessageNav(props: SessionMessageNavProps): ReactNode {
 
   const hostRef = useRef<HTMLDivElement | null>(null)
   const panelRef = useRef<HTMLDivElement | null>(null)
+  const scrollerRef = useRef<HTMLDivElement | null>(null)
   const wrapRef = useRef<HTMLDivElement | null>(null)
   const [open, setOpen] = useState(false)
   const [buttonPos, setButtonPos] = useState<ButtonPos | null>(null)
   const [panelPos, setPanelPos] = useState<PanelPos | null>(null)
   const [activeKey, setActiveKey] = useState<string | null>(null)
   const measureRef = useRef<() => void>(() => {})
+  // 无滚动条滚动（transform 驱动）：滚轮与 active 跟随共用位置状态。
+  const scrollPosRef = useRef(0)
+  const scrollTargetRef = useRef(0)
+  const scrollRafRef = useRef(0)
   // 面板空白处拖动 → 滚动会话。
   const dragRef = useRef<{
     down: boolean
@@ -238,7 +246,7 @@ export function SessionMessageNav(props: SessionMessageNavProps): ReactNode {
     const tablist = phase?.querySelector('[role="tablist"]')
     const tabRect = tablist instanceof HTMLElement ? tablist.getBoundingClientRect() : null
     const buttonY = tabRect !== null && tabRect.height > 0
-      ? tabRect.top + Math.max(0, (tabRect.height - 28) / 2) - 4
+      ? tabRect.top + Math.max(0, (tabRect.height - 28) / 2) + 28
       : sr.top + 10
     setButtonPos(prev => (
       prev !== null && Math.abs(prev.x - buttonX) < 0.5 && Math.abs(prev.y - buttonY) < 0.5
@@ -246,7 +254,11 @@ export function SessionMessageNav(props: SessionMessageNavProps): ReactNode {
         : { x: buttonX, y: buttonY }
     ))
 
-    const panelHeight = clamp(bars.length * PANEL_ROW_HEIGHT + PANEL_PADDING, 56, sr.height - 24)
+    const panelHeight = clamp(
+      bars.length * PANEL_ROW_HEIGHT + PANEL_PADDING,
+      56,
+      MAX_VISIBLE_ROWS * PANEL_ROW_HEIGHT + PANEL_PADDING,
+    )
     const x = sr.left + scrollport.clientWidth - PANEL_WIDTH - 12
     const y = sr.top + Math.max(24, (sr.height - panelHeight) / 2)
     setPanelPos(prev => (
@@ -319,7 +331,71 @@ export function SessionMessageNav(props: SessionMessageNavProps): ReactNode {
 
   useEffect(() => () => { dragRef.current = null }, [])
 
-  // 当前阅读位置的消息高亮并自动滚入面板视野。
+  // 平滑滚动到面板内目标位置（transform 驱动，无滚动条）。
+  const applyScroll = useCallback((target: number, smooth: boolean): void => {
+    const panel = panelRef.current
+    const scroller = scrollerRef.current
+    if (panel === null || scroller === null) return
+    const max = Math.max(0, scroller.scrollHeight - panel.clientHeight)
+    const t = clamp(target, 0, max)
+    scrollTargetRef.current = t
+    if (!smooth) {
+      scrollPosRef.current = t
+      scroller.style.transform = `translateY(${-t}px)`
+      if (scrollRafRef.current !== 0) cancelAnimationFrame(scrollRafRef.current)
+      scrollRafRef.current = 0
+      return
+    }
+    if (scrollRafRef.current !== 0) return
+    const tick = (): void => {
+      const s = scrollerRef.current
+      if (s === null) {
+        scrollRafRef.current = 0
+        return
+      }
+      const pos = scrollPosRef.current
+      const goal = scrollTargetRef.current
+      const next = pos + (goal - pos) * 0.18
+      if (Math.abs(goal - next) < 0.5) {
+        scrollPosRef.current = goal
+        s.style.transform = `translateY(${-goal}px)`
+        scrollRafRef.current = 0
+        return
+      }
+      scrollPosRef.current = next
+      s.style.transform = `translateY(${-next}px)`
+      scrollRafRef.current = requestAnimationFrame(tick)
+    }
+    scrollRafRef.current = requestAnimationFrame(tick)
+  }, [])
+
+  // 鼠标滚轮滚动横条面板（无滚动条）：内容超限时滚轮平滑滚动；不足时不劫持。
+  useEffect(() => {
+    const panel = panelRef.current
+    if (panel === null) return
+    const onWheel = (event: WheelEvent): void => {
+      const scroller = scrollerRef.current
+      if (scroller === null) return
+      const max = Math.max(0, scroller.scrollHeight - panel.clientHeight)
+      if (max <= 0) {
+        scrollPosRef.current = 0
+        scrollTargetRef.current = 0
+        return
+      }
+      event.preventDefault()
+      applyScroll(scrollTargetRef.current + event.deltaY, true)
+    }
+    panel.addEventListener('wheel', onWheel, { passive: false })
+    return () => {
+      panel.removeEventListener('wheel', onWheel)
+      if (scrollRafRef.current !== 0) cancelAnimationFrame(scrollRafRef.current)
+      scrollRafRef.current = 0
+      scrollPosRef.current = 0
+      scrollTargetRef.current = 0
+    }
+  }, [panelPos, bars.length, applyScroll])
+
+  // 当前阅读位置的消息高亮并平滑滚入面板视野。
   useEffect(() => {
     if (activeKey === null || panelRef.current === null) return
     const panel = panelRef.current
@@ -329,8 +405,8 @@ export function SessionMessageNav(props: SessionMessageNavProps): ReactNode {
     }
     if (row === null) return
     const target = row.offsetTop - (panel.clientHeight - row.offsetHeight) / 2
-    panel.scrollTop = clamp(target, 0, Math.max(0, panel.scrollHeight - panel.clientHeight))
-  }, [activeKey, bars.length])
+    applyScroll(target, true)
+  }, [activeKey, bars.length, applyScroll])
 
   // 面板空白处按住拖动 → 滚动会话（2 倍手感）。
   const onPanelPointerDown = (event: ReactPointerEvent<HTMLDivElement>): void => {
@@ -465,21 +541,23 @@ export function SessionMessageNav(props: SessionMessageNavProps): ReactNode {
         <div
           ref={panelRef}
           className={css.panel}
-          style={{ left: panelPos.x, top: panelPos.y, width: PANEL_WIDTH, height: clamp(bars.length * PANEL_ROW_HEIGHT + PANEL_PADDING, 56, window.innerHeight - 48) }}
+          style={{ left: panelPos.x, top: panelPos.y, width: PANEL_WIDTH, height: clamp(bars.length * PANEL_ROW_HEIGHT + PANEL_PADDING, 56, MAX_VISIBLE_ROWS * PANEL_ROW_HEIGHT + PANEL_PADDING) }}
           onPointerDown={onPanelPointerDown}
           onPointerMove={onPanelPointerMove}
           onPointerUp={onPanelPointerUp}
         >
-          {bars.map(bar => (
-            <div key={bar.key} data-bar-key={bar.key} className={css.row}>
-              <button
-                type="button"
-                className={[css.bar, bar.key === activeKey ? css.barActive : ''].filter(Boolean).join(' ')}
-                aria-label={`跳转到我的第 ${bar.index + 1} 条消息`}
-                onClick={() => { jumpTo(bar.key) }}
-              />
-            </div>
-          ))}
+          <div ref={scrollerRef} className={css.scroller}>
+            {bars.map(bar => (
+              <div key={bar.key} data-bar-key={bar.key} className={css.row}>
+                <button
+                  type="button"
+                  className={[css.bar, bar.key === activeKey ? css.barActive : ''].filter(Boolean).join(' ')}
+                  aria-label={`跳转到我的第 ${bar.index + 1} 条消息`}
+                  onClick={() => { jumpTo(bar.key) }}
+                />
+              </div>
+            ))}
+          </div>
         </div>,
         document.body,
       )}

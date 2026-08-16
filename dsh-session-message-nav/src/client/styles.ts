@@ -17,6 +17,7 @@ export const css = {
   itemText: 'smn-item-text',
   loadOlder: 'smn-load-older',
   panel: 'smn-panel',
+  scroller: 'smn-scroller',
   row: 'smn-row',
   bar: 'smn-bar',
   barActive: 'smn-bar-active',
@@ -48,10 +49,9 @@ const SHEET = `
 .smn-load-older{margin:4px 6px 2px;padding:6px 10px;border:1px dashed var(--dsw-alias-border-l2,#333);border-radius:8px;background:transparent;color:var(--dsw-alias-label-secondary,#bbb);font-size:11px;cursor:pointer}
 .smn-load-older:hover{border-color:var(--dsw-alias-state-business-primary,#4a9eff);color:var(--dsw-alias-state-business-primary,#4a9eff)}
 .smn-load-older:disabled{opacity:.5;cursor:default}
-/* 无背景面板：只显示横条本身 */
-.smn-panel{position:fixed;z-index:1100;display:flex;flex-direction:column;gap:2px;padding:6px 8px;overflow-y:auto;overscroll-behavior:contain;cursor:default;touch-action:none;user-select:none;background:transparent}
-.smn-panel::-webkit-scrollbar{width:4px}
-.smn-panel::-webkit-scrollbar-thumb{background:rgba(128,128,128,.35);border-radius:2px}
+/* 无背景面板：只显示横条本身；无滚动条（超出由滚轮平滑滚动） */
+.smn-panel{position:fixed;z-index:1100;padding:6px 8px;overflow:hidden;cursor:default;touch-action:none;user-select:none;background:transparent}
+.smn-scroller{display:flex;flex-direction:column;gap:2px;will-change:transform}
 /* 每行固定高度（18px）：横条紧凑排列 */
 .smn-row{width:100%;height:18px;display:flex;align-items:center;justify-content:flex-end;flex:0 0 auto}
 /* 横条：15px 宽细短线，无文字；不在阅读位置 = 灰色（15px），
