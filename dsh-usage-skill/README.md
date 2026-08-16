@@ -1,14 +1,12 @@
-# dsh-usage-stats
+# dsh-usage-skill
 
-[![GitHub Release](https://img.shields.io/github/v/release/Ychris12138/dsh-usage-stats?display_name=tag&sort=semver&color=1f6feb)](https://github.com/Ychris12138/dsh-usage-stats/releases/latest)
-[![CI](https://github.com/Ychris12138/dsh-usage-stats/actions/workflows/ci.yml/badge.svg)](https://github.com/Ychris12138/dsh-usage-stats/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/license-MIT-2da44e)](LICENSE)
 
-为 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 网页端提供多供应商账户监测与 Token 用量分析。
+为 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 网页端提供多供应商账户监测、Token 用量分析与技能（Skill）包管理。
 
-Provider balances, subscription quotas, and token-usage analytics for the DeepSeek Harness Web GUI (`dsh web`).
+Provider balances, subscription quotas, token-usage analytics, and skill bundle management for the DeepSeek Harness Web GUI (`dsh web`).
 
-![dsh-usage-stats v0.2.0 interface preview](docs/images/usage-panel.svg)
+![dsh-usage-skill v0.3.0 interface preview](docs/images/usage-panel.svg)
 
 > 展示图使用脱敏演示数据；插件不会把 API Key、Cookie、管理 PAT 或上游原始响应发送到浏览器。
 
@@ -18,9 +16,9 @@ Provider balances, subscription quotas, and token-usage analytics for the DeepSe
 | --- | --- | --- |
 | 💳 | 统一账户卡片 | API 供应商显示余额，Token Plan 显示分窗口额度；面板一次只呈现当前供应商 |
 | 📊 | Token 用量分析 | 今日、本月、累计、缓存命中率、月历热图，以及按日期/供应商/模型下钻 |
+| 🧩 | 技能包管理 | 侧边栏“技能”入口：新建/重命名/删除技能包（Bundle）、拖拽安装 Skill、散装技能列表 |
 | 🔄 | 后台监测 | 服务端启动即刷新，之后每五分钟更新全部已配置账户与本地 Token 聚合 |
-| 🧩 | 可扩展适配器 | 支持 New API、Sub2API、通用余额模板，以及声明式 JSON Pointer 自定义查询 |
-| 🔒 | 本机安全边界 | 五个端点仅接受回环 GET；凭据只在服务端解析并发往校验后的供应商地址 |
+| 🔒 | 本机安全边界 | 账户与技能端点仅接受回环请求；凭据只在服务端解析并发往校验后的供应商地址 |
 
 界面支持中文和英文。浏览器只请求当前选择的 provider；后台刷新与面板是否打开无关。手动刷新会更新用量、供应商列表，并强制刷新当前账户，不会批量强制请求其他供应商。
 
@@ -29,16 +27,16 @@ Provider balances, subscription quotas, and token-usage analytics for the DeepSe
 需要 DeepSeek Harness `web` profile（`@deepseek-ai/dsh >= 0.1.0-rc.6`）。
 
 ```bash
-dsh plugin --profile web add "github:Ychris12138/dsh-usage-stats"
+dsh plugin --profile web add "github:statem-li/Kr-DSH/tree/main/dsh-usage-skill"
 ```
 
-然后重启已经运行的 `dsh web`，并在浏览器中硬刷新。侧边栏底部会出现“用量/余额”（Usage/Balance）入口。
+然后重启已经运行的 `dsh web`，并在浏览器中硬刷新。侧边栏底部会出现“用量”和“技能”两个入口。
 
 升级或卸载：
 
 ```bash
-dsh plugin --profile web update dsh-usage-stats
-dsh plugin --profile web remove dsh-usage-stats
+dsh plugin --profile web update dsh-usage-skill
+dsh plugin --profile web remove dsh-usage-skill
 ```
 
 <details>
@@ -47,22 +45,22 @@ dsh plugin --profile web remove dsh-usage-stats
 PowerShell、命令提示符和 macOS/Linux 终端使用同一条命令：
 
 ```bash
-npx --yes github:Ychris12138/dsh-usage-stats
+npx --yes github:statem-li/Kr-DSH/tree/main/dsh-usage-skill
 ```
 
-安装器会把运行文件复制到 `~/.dsh/profiles/node_modules/dsh-usage-stats`，并在 `profiles/web/cordis.patch.yml` 中幂等启用插件。重复运行即可更新，不会重复追加配置。设置了 `DSH_HOME` 时使用该目录。
+安装器会把运行文件复制到 `~/.dsh/profiles/node_modules/dsh-usage-skill`，并在 `profiles/web/cordis.patch.yml` 中幂等启用插件。重复运行即可更新，不会重复追加配置。设置了 `DSH_HOME` 时使用该目录。
 
 `dsh plugin` 与 `npx` 是两条独立安装路径，请选择其中一种；不要同时保留手工 Cordis entry 和 bundle 注册，否则会重复挂载。
 
 ```bash
 # 预览，不修改文件
-npx --yes github:Ychris12138/dsh-usage-stats --dry-run
+npx --yes github:statem-li/Kr-DSH/tree/main/dsh-usage-skill --dry-run
 
 # 检查现有安装
-npx --yes github:Ychris12138/dsh-usage-stats --check
+npx --yes github:statem-li/Kr-DSH/tree/main/dsh-usage-skill --check
 
 # 安装但不修改 Cordis patch
-npx --yes github:Ychris12138/dsh-usage-stats --no-enable
+npx --yes github:statem-li/Kr-DSH/tree/main/dsh-usage-skill --no-enable
 ```
 
 无法使用 `npx` 时可从源码运行 `node scripts/install.mjs`。
@@ -130,7 +128,7 @@ Z.ai 全球区使用 `api.z.ai`，中国区使用 `open.bigmodel.cn`。MiniMax �
 
 ### New API、Sub2API 与自定义 monitor
 
-在现有 `name: dsh-usage-stats` Cordis entry 下合并 `config`，不要追加第二个插件 entry。monitor 键必须是 Harness 中真实存在的 provider id；未知 provider、adapter 或非法映射会在路由和 timer 注册前阻止插件启动。
+在现有 `name: dsh-usage-skill` Cordis entry 下合并 `config`，不要追加第二个插件 entry。monitor 键必须是 Harness 中真实存在的 provider id；未知 provider、adapter 或非法映射会在路由和 timer 注册前阻止插件启动。
 
 <details>
 <summary><strong>展开 monitor 配置示例</strong></summary>
@@ -141,7 +139,7 @@ New API 默认用 provider 推理 Token 查询 `/api/usage/token/`，并从 `/ap
 # ~/.dsh/profiles/web/cordis.patch.yml
 - insert:
     - id: usage-stats
-      name: dsh-usage-stats
+      name: dsh-usage-skill
       config:
         monitors:
           relay-a:                 # Harness provider id
@@ -217,8 +215,8 @@ Passion（provider id 为 `passion` 或域名为 `*.passionapi.com`）会自动�
 <summary><strong>复制给 Codex、Claude Code 或其他本地编码 Agent</strong></summary>
 
 ```text
-Install or update dsh-usage-stats from:
-https://github.com/Ychris12138/dsh-usage-stats
+Install or update dsh-usage-skill from:
+https://github.com/statem-li/Kr-DSH/tree/main/dsh-usage-skill
 
 Constraints:
 - Resolve DSH_HOME from the environment; otherwise use ~/.dsh.
@@ -228,9 +226,9 @@ Constraints:
 
 Procedure:
 1. Confirm node, npx, and dsh are available.
-2. Prefer `dsh plugin --profile web update dsh-usage-stats` when already installed; otherwise use `dsh plugin --profile web add "github:Ychris12138/dsh-usage-stats"`.
-3. If unavailable, use: npx --yes github:Ychris12138/dsh-usage-stats
-4. Do not combine bundle installation with an existing manual dsh-usage-stats Cordis entry.
+2. Prefer `dsh plugin --profile web update dsh-usage-skill` when already installed; otherwise use `dsh plugin --profile web add "github:statem-li/Kr-DSH/tree/main/dsh-usage-skill"`.
+3. If unavailable, use: npx --yes github:statem-li/Kr-DSH/tree/main/dsh-usage-skill
+4. Do not combine bundle installation with an existing manual dsh-usage-skill Cordis entry.
 5. For npx, require a verified package and exactly one Cordis entry, then run again with --check.
 6. Report the installation path and resolved profile paths.
 7. If dsh web is running, report that a restart is needed and stop.
@@ -244,7 +242,7 @@ Optional account setup (never handle secret values yourself):
 
 Optional monitor setup:
 - Read configured Harness provider ids and ask which id should receive a monitor.
-- Add only non-secret config under the existing dsh-usage-stats Cordis entry.
+- Add only non-secret config under the existing dsh-usage-skill Cordis entry.
 - Store credential reference names, never credential values.
 - Validate relative request.path and JSON Pointer fields beginning with /.
 - Do not enable cross-origin, insecure HTTP, or private-network access unless I explicitly request it.
@@ -253,7 +251,7 @@ Optional monitor setup:
 只获准检查而不能修改时运行：
 
 ```bash
-npx --yes github:Ychris12138/dsh-usage-stats --check
+npx --yes github:statem-li/Kr-DSH/tree/main/dsh-usage-skill --check
 ```
 
 安装器退出码：未知参数返回 `2`；文件、版本或配置验证失败返回非零；成功时输出已验证版本、安装目录和 patch 路径。Agent 无需自行解析或重写 YAML。

@@ -1,5 +1,5 @@
 /**
- * dsh-usage-stats — browser half.
+ * dsh-usage-skill — browser half.
  *
  * Hand-written `__ModuleLoader__` bundle (no build step): a sidebar footer
  * action that opens a floating panel with provider balances, subscription
@@ -8,7 +8,7 @@
  * half's loopback-only endpoints via same-origin fetch.
  */
 window.__ModuleLoader__.load({
-	id: "dsh-usage-stats",
+	id: "dsh-usage-skill",
 	factory: (require) => {
 		var module = { exports: {} };
 		var exports = module.exports;
@@ -709,10 +709,10 @@ window.__ModuleLoader__.load({
 			".usg_modelMeta{color:var(--dsw-alias-label-tertiary);font-size:11px;line-height:16px;font-variant-numeric:tabular-nums}",
 			".usg_footerNote{color:var(--dsw-alias-label-caption);margin-top:10px;font-size:11px;line-height:16px;font-variant-numeric:tabular-nums}"
 		].join("");
-		const tagId = "dsh-usage-stats/UsageStats.module.css";
+		const tagId = "dsh-usage-skill/UsageStats.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId) + "]") === null) {
 			const tag = document.createElement("style");
-			tag.dataset.plugin = "dsh-usage-stats";
+			tag.dataset.plugin = "dsh-usage-skill";
 			tag.dataset.pluginCss = tagId;
 			tag.textContent = css;
 			document.head.appendChild(tag);

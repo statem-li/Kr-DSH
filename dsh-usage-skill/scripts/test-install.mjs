@@ -5,10 +5,10 @@ import { join } from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
-const home = await mkdtemp(join(tmpdir(), "dsh-usage-stats-install-"));
+const home = await mkdtemp(join(tmpdir(), "dsh-usage-skill-install-"));
 const installer = fileURLToPath(new URL("./install.mjs", import.meta.url));
 const patchPath = join(home, "profiles", "web", "cordis.patch.yml");
-const pluginEntry = /^\s+name:\s*dsh-usage-stats\s*$/gm;
+const pluginEntry = /^\s+name:\s*dsh-usage-skill\s*$/gm;
 
 function run(...args) {
 	const result = spawnSync(process.execPath, [installer, ...args], {
@@ -31,7 +31,7 @@ function runFailure(...args) {
 try {
 	run();
 	run();
-	assert.match(run("--check"), /Verified dsh-usage-stats@/);
+	assert.match(run("--check"), /Verified dsh-usage-skill@/);
 	let patch = await readFile(patchPath, "utf8");
 	assert.equal([...patch.matchAll(pluginEntry)].length, 1, "installer must be idempotent");
 
@@ -64,10 +64,10 @@ try {
 
 	const brokenLegacyPatch = `[]
 
-# dsh-usage-stats: token usage heatmap + DeepSeek balance
+# dsh-usage-skill: token usage heatmap + DeepSeek balance
 - insert:
     - id: usage-stats
-      name: dsh-usage-stats
+      name: dsh-usage-skill
 `;
 	await writeFile(patchPath, brokenLegacyPatch, "utf8");
 	assert.match(runFailure("--check"), /invalid YAML/, "check mode must reject the legacy broken shape");
@@ -90,14 +90,14 @@ try {
 	patch = await readFile(patchPath, "utf8");
 	assert.match(patch, /name: existing-plugin/, "existing patch entries must be preserved");
 	assert.equal([...patch.matchAll(pluginEntry)].length, 1);
-	const installed = JSON.parse(await readFile(join(home, "profiles", "node_modules", "dsh-usage-stats", "package.json"), "utf8"));
-	assert.equal(installed.name, "dsh-usage-stats");
+	const installed = JSON.parse(await readFile(join(home, "profiles", "node_modules", "dsh-usage-skill", "package.json"), "utf8"));
+	assert.equal(installed.name, "dsh-usage-skill");
 	assert.equal(installed.dsh?.bundle?.patch, "./cordis.patch.yml");
 	assert.match(
-		await readFile(join(home, "profiles", "node_modules", "dsh-usage-stats", "cordis.patch.yml"), "utf8"),
-		/^\s+name:\s*dsh-usage-stats\s*$/m
+		await readFile(join(home, "profiles", "node_modules", "dsh-usage-skill", "cordis.patch.yml"), "utf8"),
+		/^\s+name:\s*dsh-usage-skill\s*$/m
 	);
-	assert.equal(await readFile(join(home, "profiles", "node_modules", "dsh-usage-stats", "lib", "index.js"), "utf8").then((text) => text.length > 1000), true);
+	assert.equal(await readFile(join(home, "profiles", "node_modules", "dsh-usage-skill", "lib", "index.js"), "utf8").then((text) => text.length > 1000), true);
 	console.log("INSTALLER REGRESSION TESTS PASSED");
 } finally {
 	await rm(home, { recursive: true, force: true });

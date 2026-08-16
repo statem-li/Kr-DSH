@@ -6,7 +6,7 @@
  * are credential references, request paths are relative, and response fields
  * are extracted with JSON Pointer rather than executable JavaScript.
  *
- * @module dsh-usage-stats/accounts
+ * @module dsh-usage-skill/accounts
  */
 
 import { balanceSchemeOf, queryBalance } from "./balance.js";

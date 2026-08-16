@@ -190,7 +190,7 @@ async function testRevisionRewrite(root) {
 	assert.equal(reads, 3, "rewrite detection must retry from seq 0");
 }
 
-const root = await mkdtemp(join(tmpdir(), "dsh-usage-stats-"));
+const root = await mkdtemp(join(tmpdir(), "dsh-usage-skill-"));
 try {
 	await testRouteFence(root);
 	await testConfigValidation(root);

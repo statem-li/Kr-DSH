@@ -1,22 +1,23 @@
 {
-  "name": "dsh-usage-stats",
-  "description": "Token usage heatmap, provider balances, and subscription quotas for the dsh web GUI",
-  "version": "0.2.0",
+  "name": "dsh-usage-skill",
+  "description": "Token usage analytics, provider balances, and skill bundle management for the dsh web GUI",
+  "version": "0.3.0",
   "private": true,
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Ychris12138/dsh-usage-stats.git"
+    "url": "git+https://github.com/statem-li/Kr-DSH.git"
   },
-  "homepage": "https://github.com/Ychris12138/dsh-usage-stats#readme",
-  "bugs": "https://github.com/Ychris12138/dsh-usage-stats/issues",
+  "homepage": "https://github.com/statem-li/Kr-DSH#readme",
+  "bugs": "https://github.com/statem-li/Kr-DSH/issues",
   "keywords": [
     "deepseek",
     "deepseek-harness",
     "dsh",
-    "token-usage"
+    "token-usage",
+    "skill-manager"
   ],
   "bin": {
-    "dsh-usage-stats-install": "scripts/install.mjs"
+    "dsh-usage-skill-install": "scripts/install.mjs"
   },
   "files": [
     "lib/",

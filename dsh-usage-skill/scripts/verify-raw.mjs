@@ -1,4 +1,4 @@
-// verify-raw.mjs — independent verification of dsh-usage-stats numbers
+// verify-raw.mjs — independent verification of dsh-usage-skill numbers
 // (INTEGRATION test: requires a running `dsh web` on :3080).
 //
 // Path A (raw bytes): decompress ~/.dsh/sessions/**/session.jsonl.zstd with

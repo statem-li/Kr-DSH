@@ -1,5 +1,5 @@
 /**
- * dsh-usage-stats — pure per-day, per-model token-usage aggregation over
+ * dsh-usage-skill — pure per-day, per-model token-usage aggregation over
  * session event logs. Kept free of cordis imports so it can be unit-tested
  * and validated against real logs outside the running harness.
  *
@@ -14,7 +14,7 @@
  * back to the last `request/header` `data.header.config.model`; samples with
  * no model information land in the `unknown` bucket.
  *
- * @module dsh-usage-stats/usage
+ * @module dsh-usage-skill/usage
  */
 
 /** Local-calendar `YYYY-MM-DD` key for a millisecond epoch. */

@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1400" height="860" viewBox="0 0 1400 860" role="img" aria-labelledby="title desc">
-  <title id="title">dsh-usage-stats provider account and token usage panel</title>
+  <title id="title">dsh-usage-skill provider account and token usage panel</title>
   <desc id="desc">A sanitized vector preview of the DeepSeek Harness usage panel showing a provider balance, token totals, a monthly heatmap, and recent usage.</desc>
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">

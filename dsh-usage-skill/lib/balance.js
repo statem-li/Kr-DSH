@@ -1,5 +1,5 @@
 /**
- * dsh-usage-stats — provider balance schemes.
+ * dsh-usage-skill — provider balance schemes.
  *
  * Pure, testable balance-query registry. Each scheme knows the endpoint path
  * (relative to the provider's configured base URL) and how to parse the
@@ -8,7 +8,7 @@
  * Volcano Ark, OpenAI, Anthropic, …) map to no scheme — the UI shows an
  * explicit "no public balance interface" state instead of guessing.
  *
- * @module dsh-usage-stats/balance
+ * @module dsh-usage-skill/balance
  */
 
 const SCHEMES = {

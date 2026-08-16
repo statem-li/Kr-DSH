@@ -1,4 +1,4 @@
-# CC Switch 用量查询方案与 dsh-usage-stats 扩展设计
+# CC Switch 用量查询方案与 dsh-usage-skill 扩展设计
 
 > 研究时间：2026-08-15
 >
@@ -262,7 +262,7 @@ Harness 官方支持 Cordis entry 的 `config`，并把配置作为 `apply(ctx, 
 ```yaml
 - insert:
     - id: usage-stats
-      name: dsh-usage-stats
+      name: dsh-usage-skill
       config:
         monitors:
           relay-a:

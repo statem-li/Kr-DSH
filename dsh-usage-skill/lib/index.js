@@ -1,6 +1,6 @@
 import { apply as applySkills } from './skills-host.js';
 /**
- * dsh-usage-stats — server half.
+ * dsh-usage-skill — server half.
  *
  * Registers five read-only, loopback-only endpoints on the web server:
  *   GET /api/usage-stats/usage         — per-day token usage across every session
@@ -28,7 +28,7 @@ import { apply as applySkills } from './skills-host.js';
  * revision when available. Steady-state cost stays O(new events) no matter
  * how large the logs grow.
  *
- * @module dsh-usage-stats
+ * @module dsh-usage-skill
  */
 
 import { homedir } from "node:os";
@@ -552,7 +552,7 @@ export function startBackgroundRefresh(ctx, accounts, deps = {}) {
 const Config = {
 	"~standard": {
 		version: 1,
-		vendor: "dsh-usage-stats",
+		vendor: "dsh-usage-skill",
 		validate(value) {
 			try {
 				return { value: validateAccountConfig(value ?? {}) };

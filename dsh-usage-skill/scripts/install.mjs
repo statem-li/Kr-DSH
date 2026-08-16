@@ -15,10 +15,10 @@ for (const arg of args) {
 }
 
 if (args.has("--help")) {
-	console.log(`dsh-usage-stats installer
+	console.log(`dsh-usage-skill installer
 
 Usage:
-  npx --yes github:Ychris12138/dsh-usage-stats [options]
+  npx --yes github:statem-li/Kr-DSH/tree/main/dsh-usage-skill [options]
 
 Options:
   --check      Verify the installed package and Cordis patch without changing them
@@ -33,13 +33,13 @@ Set DSH_HOME to override the default ~/.dsh location.`);
 const sourceRoot = dirname(dirname(fileURLToPath(import.meta.url)));
 const sourcePackage = JSON.parse(await readFile(join(sourceRoot, "package.json"), "utf8"));
 const dshHome = process.env.DSH_HOME ?? join(homedir(), ".dsh");
-const target = join(dshHome, "profiles", "node_modules", "dsh-usage-stats");
+const target = join(dshHome, "profiles", "node_modules", "dsh-usage-skill");
 const patchPath = join(dshHome, "profiles", "web", "cordis.patch.yml");
-const pluginLine = /^\s+name:\s*dsh-usage-stats\s*$/gm;
-const patchBlock = `# dsh-usage-stats: token usage heatmap + DeepSeek balance
+const pluginLine = /^\s+name:\s*dsh-usage-skill\s*$/gm;
+const patchBlock = `# dsh-usage-skill: token usage heatmap + DeepSeek balance
 - insert:
     - id: usage-stats
-      name: dsh-usage-stats
+      name: dsh-usage-skill
 `;
 const emptySequenceRoot = /^\[\](?:[ \t]+#.*)?$/;
 
@@ -102,7 +102,7 @@ async function verify(expectEnabled) {
 	if (expectEnabled) {
 		const patch = await readOptional(patchPath);
 		const count = patch === null ? 0 : [...patch.matchAll(pluginLine)].length;
-		if (count !== 1) throw new Error(`expected exactly one dsh-usage-stats entry in ${patchPath}; found ${count}`);
+		if (count !== 1) throw new Error(`expected exactly one dsh-usage-skill entry in ${patchPath}; found ${count}`);
 		assertNoEmptyRootConflict(patch);
 	}
 	console.log(`Verified ${sourcePackage.name}@${sourcePackage.version}`);

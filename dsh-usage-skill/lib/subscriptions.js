@@ -12,7 +12,7 @@
  * and keeps the authenticated workspace dashboard as a compatibility fallback.
  * Z.ai uses its Coding Plan quota endpoints with a normal API key.
  *
- * @module dsh-usage-stats/subscriptions
+ * @module dsh-usage-skill/subscriptions
  */
 
 import { readFile } from "node:fs/promises";

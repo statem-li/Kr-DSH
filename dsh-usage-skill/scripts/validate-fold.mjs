@@ -1,4 +1,4 @@
-// Validate dsh-usage-stats fold against the live dsh web API (INTEGRATION test:
+// Validate dsh-usage-skill fold against the live dsh web API (INTEGRATION test:
 // requires a running `dsh web` on :3080):
 // 1. for EVERY non-blank session with a tokenUsage projection, page ALL of its
 //    events via session.history
