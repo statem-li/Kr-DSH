@@ -3,6 +3,7 @@ import { mkdir, readFile, readdir, rename, rm, stat, writeFile } from "node:fs/p
 import { homedir } from "node:os";
 import { join, relative, resolve, sep } from "node:path";
 import { URL } from "node:url";
+import { inflateRawSync } from "node:zlib";
 var name = "skill-manager";
 var inject = ["webServer"];
 var SKILL_FILE = "SKILL.md";
@@ -10,6 +11,53 @@ var BUNDLES_FILE = ".bundles.json";
 var ROUTE_PREFIX = "/api/skill-manager";
 var NAME_MAX = 64;
 var NAME_PATTERN = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/;
+var ARCHIVE_MAX_ENTRIES = 2000;
+var ARCHIVE_MAX_TOTAL = 200 * 1024 * 1024;
+function unzipArchive(buffer) {
+  if (buffer.length < 22) throw new Error("not a zip archive");
+  let eocd = -1;
+  const tailStart = Math.max(0, buffer.length - 65557);
+  for (let i = buffer.length - 22; i >= tailStart; i--) {
+    if (buffer.readUInt32LE(i) === 0x06054b50) {
+      eocd = i;
+      break;
+    }
+  }
+  if (eocd < 0) throw new Error("not a zip archive");
+  const totalEntries = buffer.readUInt16LE(eocd + 10);
+  if (totalEntries === 0 || totalEntries > ARCHIVE_MAX_ENTRIES) throw new Error("archive has too many entries");
+  const cdOffset = buffer.readUInt32LE(eocd + 16);
+  const files = [];
+  let pos = cdOffset;
+  for (let i = 0; i < totalEntries; i++) {
+    if (pos + 46 > buffer.length || buffer.readUInt32LE(pos) !== 0x02014b50) break;
+    const method = buffer.readUInt16LE(pos + 10);
+    const compSize = buffer.readUInt32LE(pos + 20);
+    const nameLen = buffer.readUInt16LE(pos + 28);
+    const extraLen = buffer.readUInt16LE(pos + 30);
+    const commentLen = buffer.readUInt16LE(pos + 32);
+    const localOffset = buffer.readUInt32LE(pos + 42);
+    const name = buffer.subarray(pos + 46, pos + 46 + nameLen).toString("utf8");
+    if (!name.endsWith("/") && name !== "") {
+      if (method !== 0 && method !== 8) throw new Error(`unsupported zip compression method ${String(method)}`);
+      const lhNameLen = buffer.readUInt16LE(localOffset + 26);
+      const lhExtraLen = buffer.readUInt16LE(localOffset + 28);
+      const dataStart = localOffset + 30 + lhNameLen + lhExtraLen;
+      if (dataStart + compSize > buffer.length) throw new Error("corrupt zip archive");
+      const raw = buffer.subarray(dataStart, dataStart + compSize);
+      const data = method === 0 ? Buffer.from(raw) : inflateRawSync(raw);
+      files.push({ name, data });
+    }
+    pos += 46 + nameLen + extraLen + commentLen;
+  }
+  if (files.length === 0) throw new Error("archive contains no files");
+  let total = 0;
+  for (const file of files) {
+    total += file.data.length;
+    if (total > ARCHIVE_MAX_TOTAL) throw new Error("archive too large");
+  }
+  return files;
+}
 function managedRoot() {
   const agentsHome = process.env.DSH_AGENTS_HOME ?? join(homedir(), ".agents");
   return join(agentsHome, "skills");
@@ -185,7 +233,59 @@ async function setBundleSkills(id, body) {
   const views = skills.map((name2) => byName.get(name2)).filter((skill) => skill !== void 0);
   return { id: record.id, name: record.name, skillCount: views.length, skills: views };
 }
+async function assignBundle(root, skillName, bundleId) {
+  if (typeof bundleId !== "string" || bundleId === "") return;
+  const ledger = await readBundles(root);
+  const index = ledger.bundles.findIndex((bundle) => bundle.id === bundleId);
+  if (index === -1) throw new Error(`bundle ${JSON.stringify(bundleId)} not found`);
+  const bundles = ledger.bundles.map((candidate, i) => i === index ? { ...candidate, skills: [...candidate.skills.filter((name2) => name2 !== skillName), skillName] } : { ...candidate, skills: candidate.skills.filter((name2) => name2 !== skillName) });
+  await writeBundles(root, { version: 1, bundles });
+}
+async function installArchive(body) {
+  const root = managedRoot();
+  const raw = typeof body.archive === "string" ? body.archive : "";
+  if (raw === "") throw new Error("empty archive");
+  const files = unzipArchive(Buffer.from(raw, "base64"));
+  const skillIndex = files.findIndex((file) => file.name === SKILL_FILE || file.name.endsWith("/" + SKILL_FILE));
+  const skillEntry = skillIndex === -1 ? void 0 : files[skillIndex];
+  if (skillEntry === void 0) throw new Error(`archive must contain ${SKILL_FILE}`);
+  const meta = parseFrontmatter(skillEntry.data.toString("utf8"));
+  let skillName = typeof meta.name === "string" ? meta.name.trim() : "";
+  if (!NAME_PATTERN.test(skillName)) {
+    const top = skillEntry.name.slice(0, skillEntry.name.length - SKILL_FILE.length).replace(/\/+$/, "");
+    const fallback = top.split("/").pop() ?? "";
+    skillName = fallback.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+  }
+  if (!NAME_PATTERN.test(skillName)) throw new Error("skill name must be lowercase alphanumeric/hyphen");
+  if (skillName.length > NAME_MAX) throw new Error(`name must be 1-${String(NAME_MAX)} characters`);
+  const skillDir = join(root, skillName);
+  const base = skillEntry.name.slice(0, skillEntry.name.length - SKILL_FILE.length).replace(/\/+$/, "");
+  let hasSkillFile = false;
+  for (const file of files) {
+    let rel = file.name;
+    if (base !== "" && rel.startsWith(base + "/")) rel = rel.slice(base.length + 1);
+    if (rel === SKILL_FILE) hasSkillFile = true;
+    const target = resolveSkillFile(skillDir, rel);
+    await mkdir(join(target, ".."), { recursive: true });
+    await writeFile(target, file.data);
+  }
+  if (!hasSkillFile) {
+    const description = typeof body.description === "string" ? body.description.trim() : "";
+    await writeFile(join(skillDir, SKILL_FILE), `---
+name: ${skillName}
+description: ${description || "Installed from the Skills panel."}
+---
+
+${description}`, "utf8");
+  }
+  await assignBundle(root, skillName, typeof body.bundleId === "string" ? body.bundleId : "");
+  const finalMeta = await readSkillMeta(root, skillName);
+  return { name: finalMeta?.name ?? skillName, description: finalMeta?.description ?? "" };
+}
 async function installSkill(body) {
+  if (typeof body.archive === "string" && body.archive !== "") {
+    return installArchive(body);
+  }
   const skillName = checkedName(typeof body.skillName === "string" ? body.skillName : "");
   if (!NAME_PATTERN.test(skillName)) {
     throw new Error("skill name must be lowercase alphanumeric/hyphen");

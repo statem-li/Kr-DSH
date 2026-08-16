@@ -256,6 +256,17 @@ window.__ModuleLoader__.load({
 			      collected.push({ path: parts.slice(1).join("/"), file });
 			    }
 			    if (collected.length === 0) return;
+			    const zipCandidate = collected.length === 1 && collected[0].path.toLowerCase().endsWith(".zip") ? collected[0] : void 0;
+			    if (zipCandidate !== void 0) {
+			      const reader = new FileReader();
+			      reader.onload = () => {
+			        const data = String(reader.result ?? "").split(",")[1] ?? "";
+			        setInstall({ archive: true, name: zipCandidate.path, data, folderName: zipCandidate.path });
+			        setInstallError(null);
+			      };
+			      reader.readAsDataURL(zipCandidate.file);
+			      return;
+			    }
 			    const rootName = collected[0]?.path.split("/")[0] ?? "";
 			    setInstallName(rootName);
 			    setInstallError(null);
@@ -274,6 +285,12 @@ window.__ModuleLoader__.load({
 			    }
 			    await Promise.all(pending);
 			    if (collected.length === 0) return;
+			    const zipCandidate = collected.length === 1 && collected[0].path.toLowerCase().endsWith(".zip") ? collected[0] : void 0;
+			    if (zipCandidate !== void 0) {
+			      setInstall({ archive: true, name: zipCandidate.path, data: await fileToBase64(zipCandidate.file), folderName: zipCandidate.path });
+			      setInstallError(null);
+			      return;
+			    }
 			    const rootName = collected[0]?.path.split("/")[0] ?? "";
 			    setInstallName(rootName);
 			    setInstallError(null);
@@ -281,20 +298,29 @@ window.__ModuleLoader__.load({
 			  };
 			  const confirmInstall = async (event) => {
 			    event.preventDefault();
-			    if (install === null || installing || installName.trim() === "") return;
+			    if (install === null || installing) return;
+			    if (install.archive !== true && installName.trim() === "") return;
 			    setInstalling(true);
 			    setInstallError(null);
 			    try {
-			      const files = await Promise.all(install.files.map(async ({ path, file }) => ({
-			        path,
-			        data: await fileToBase64(file)
-			      })));
-			      await installSkill({
-			        skillName: installName.trim(),
-			        description: installDescription.trim(),
-			        ...installBundleId === void 0 ? {} : { bundleId: installBundleId },
-			        files
-			      });
+			      if (install.archive === true) {
+			        await installSkill({
+			          archive: install.data,
+			          description: installDescription.trim(),
+			          ...installBundleId === void 0 ? {} : { bundleId: installBundleId }
+			        });
+			      } else {
+			        const files = await Promise.all(install.files.map(async ({ path, file }) => ({
+			          path,
+			          data: await fileToBase64(file)
+			        })));
+			        await installSkill({
+			          skillName: installName.trim(),
+			          description: installDescription.trim(),
+			          ...installBundleId === void 0 ? {} : { bundleId: installBundleId },
+			          files
+			        });
+			      }
 			      setInstall(null);
 			      setInstallName("");
 			      setInstallDescription("");
@@ -457,9 +483,9 @@ window.__ModuleLoader__.load({
 			      {
 			        className: css.inlineInput,
 			        value: installName,
-			        placeholder: t("installNamePlaceholder"),
+			        placeholder: install.archive === true ? t("installNameFromArchive") : t("installNamePlaceholder"),
 			        "aria-label": t("installName"),
-			        disabled: installing,
+			        disabled: installing || install.archive === true,
 			        onChange: (event) => {
 			          setInstallName(event.currentTarget.value);
 			        }
@@ -487,7 +513,7 @@ window.__ModuleLoader__.load({
 			      },
 			      /* @__PURE__ */ React.createElement("option", { value: "" }, t("installLoose")),
 			      bundles.map((bundle) => /* @__PURE__ */ React.createElement("option", { key: bundle.id, value: bundle.id }, bundle.name))
-			    )), /* @__PURE__ */ React.createElement("span", { className: css.installMeta }, t("uploadMeta", { n: install.files.length, folder: install.folderName }))), nameInvalid && /* @__PURE__ */ React.createElement("p", { className: css.error, role: "alert" }, t("installNameInvalid")), /* @__PURE__ */ React.createElement("div", { className: css.installActions }, /* @__PURE__ */ React.createElement(import_dsh_client_ui_primitives.Button, { variant: "primary", type: "submit", disabled: installing || trimmedName === "" || nameInvalid }, t("installConfirm")), /* @__PURE__ */ React.createElement(import_dsh_client_ui_primitives.Button, { variant: "outline", type: "button", disabled: installing, onClick: () => {
+			    )), /* @__PURE__ */ React.createElement("span", { className: css.installMeta }, install.archive === true ? t("uploadMeta", { n: 1, folder: install.folderName }) : t("uploadMeta", { n: install.files.length, folder: install.folderName }))), !install.archive === true && nameInvalid && /* @__PURE__ */ React.createElement("p", { className: css.error, role: "alert" }, t("installNameInvalid")), /* @__PURE__ */ React.createElement("div", { className: css.installActions }, /* @__PURE__ */ React.createElement(import_dsh_client_ui_primitives.Button, { variant: "primary", type: "submit", disabled: installing || (install.archive !== true && (trimmedName === "" || nameInvalid)) }, t("installConfirm")), /* @__PURE__ */ React.createElement(import_dsh_client_ui_primitives.Button, { variant: "outline", type: "button", disabled: installing, onClick: () => {
 			      setInstall(null);
 			    } }, t("installCancel"))), installError !== null && /* @__PURE__ */ React.createElement("p", { className: css.error, role: "alert" }, installError)), state.status === "loading" ? /* @__PURE__ */ React.createElement("p", { className: css.status }, t("loading")) : null, state.status === "error" ? /* @__PURE__ */ React.createElement("div", { className: css.failure }, /* @__PURE__ */ React.createElement("p", { role: "alert" }, t("error")), /* @__PURE__ */ React.createElement(import_dsh_client_ui_primitives.Button, { variant: "outline", onClick: refresh }, /* @__PURE__ */ React.createElement(import_dsh_client_ui_primitives.IconRefreshOutline14, null), " ", t("retry"))) : null, state.status === "ready" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("h3", { className: css.sectionTitle }, t("bundlesTitle")), bundles.length === 0 ? /* @__PURE__ */ React.createElement("p", { className: css.status }, t("bundlesEmpty")) : /* @__PURE__ */ React.createElement("ul", { className: css.bundleList }, bundles.map((bundle) => {
 			      const open2 = expanded.has(bundle.id);
@@ -2094,6 +2120,7 @@ window.__ModuleLoader__.load({
 			error: "暂时无法读取技能。", retry: "重试",
 			uploadHint: "拖入技能文件夹安装，或点击选择", uploadMeta: "{n} 个文件 · {folder}",
 			installName: "技能名称", installNamePlaceholder: "例如 my-skill", installDescription: "描述（可选）",
+			installNameFromArchive: "技能名取自压缩包内的 SKILL.md",
 			installNameInvalid: "技能名只能包含小写字母、数字和连字符（a-z 0-9 -）",
 			installBundle: "归入 Bundle", installLoose: "不归组（散装）", installConfirm: "安装", installCancel: "取消",
 			bundlesTitle: "技能包", bundlesEmpty: "还没有技能包，点「新建 Bundle」创建一个。",
