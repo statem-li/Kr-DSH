@@ -1,0 +1,7 @@
+# dsh-tool-summary：工具调用聚合 + 总结卡片（client-only 插件，host 行为空）。
+# 通过 slot shadow 接管 conversation.chat.node 的 tool-call key，
+# 把每一轮的工具调用合并为一个可折叠分组。
+
+- insert:
+    - id: dsh-tool-summary
+      name: dsh-tool-summary

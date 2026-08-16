@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "allowImportingTsExtensions": true,
+    "verbatimModuleSyntax": true,
+    "types": [],
+    "baseUrl": ".",
+    "ignoreDeprecations": "6.0",
+    "paths": {
+      "@deepseek-ai/cordis": ["../../deepseek-harness/node_modules/.pnpm/node_modules/@deepseek-ai/cordis"],
+      "@deepseek-ai/dsh-client-runtime/client": ["../../deepseek-harness/node_modules/.pnpm/node_modules/@deepseek-ai/dsh-client-runtime/lib/types/client/index.d.ts"],
+      "@deepseek-ai/dsh-client-ui-tool/client": ["../../deepseek-harness/node_modules/.pnpm/node_modules/@deepseek-ai/dsh-client-ui-tool/lib/types/client/index.d.ts"],
+      "@deepseek-ai/dsh-client-ui-conversation/client": ["../../deepseek-harness/node_modules/.pnpm/node_modules/@deepseek-ai/dsh-client-ui-conversation/lib/types/client/index.d.ts"],
+      "react": ["../../deepseek-harness/node_modules/.pnpm/node_modules/@types/react"],
+      "react/jsx-runtime": ["../../deepseek-harness/node_modules/.pnpm/node_modules/@types/react/jsx-runtime.d.ts"],
+      "react-dom": ["../../deepseek-harness/node_modules/.pnpm/node_modules/@types/react-dom"],
+      "react-dom/client": ["../../deepseek-harness/node_modules/.pnpm/node_modules/@types/react-dom/client.d.ts"]
+    }
+  },
+  "include": ["src"]
+}
