@@ -83,10 +83,24 @@ window.__ModuleLoader__.load({
 			  bundleActions: "skm-bundle-actions",
 			  iconAction: "skm-icon-action",
 			  skillList: "skm-skill-list",
+			  skillItem: "skm-skill-item",
 			  skillRow: "skm-skill-row",
 			  skillLabel: "skm-skill-label",
 			  skillName: "skm-skill-name",
 			  skillDescription: "skm-skill-desc",
+			  skillExpand: "skm-skill-expand",
+			  skillCount: "skm-skill-count",
+			  skillCompat: "skm-skill-compat",
+			  skillFiles: "skm-skill-files",
+			  skillFile: "skm-skill-file",
+			  skillPreview: "skm-skill-preview",
+			  viewerModal: "skm-viewer-modal",
+			  viewerBody: "skm-viewer-body",
+			  viewerLayout: "skm-viewer-layout",
+			  viewerNav: "skm-viewer-nav",
+			  viewerNavItem: "skm-viewer-nav-item",
+			  viewerNavDir: "skm-viewer-nav-dir",
+			  viewerContent: "skm-viewer-content",
 			  looseEmpty: "skm-loose-empty",
 			  visuallyHidden: "skm-visually-hidden"
 			};
@@ -133,11 +147,54 @@ window.__ModuleLoader__.load({
 			.skm-icon-action{flex:none;display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border:none;border-radius:50%;padding:0;background:transparent;cursor:pointer;color:var(--dsw-alias-label-tertiary,#888)}
 			.skm-icon-action:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(255,255,255,.06));color:var(--dsw-alias-label-primary,#eee)}
 			.skm-skill-list{list-style:none;margin:0;padding:2px 6px 6px;width:100%;display:flex;flex-direction:column;gap:2px}
-			.skm-skill-row{display:flex;align-items:center;gap:6px;padding:4px 6px;border-radius:8px}
+			.skm-skill-item{display:flex;flex-direction:column;gap:2px;padding:2px 0;border-radius:8px}
+			.skm-skill-item:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(255,255,255,.06))}
+			.skm-skill-row{display:flex;align-items:center;gap:6px;padding:2px 6px;border-radius:8px}
 			.skm-skill-row:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(255,255,255,.06))}
 			.skm-skill-label{flex:1;min-width:0;display:flex;flex-direction:column;overflow:hidden}
 			.skm-skill-name{font-size:13px;line-height:18px;color:var(--dsw-alias-label-primary,#eee);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 			.skm-skill-desc{font-size:12px;line-height:16px;color:var(--dsw-alias-label-tertiary,#888);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+			.skm-skill-expand{flex:none;display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border:none;border-radius:6px;padding:0;background:transparent;cursor:pointer;color:var(--dsw-alias-label-tertiary,#888);transition:transform 120ms}
+			.skm-skill-expand:hover{color:var(--dsw-alias-label-primary,#eee);background:var(--dsw-alias-interactive-bg-hover,rgba(255,255,255,.06))}
+			.skm-skill-expand[data-open='true']{transform:rotate(180deg)}
+			.skm-skill-count{flex:none;font-size:11px;line-height:16px;color:var(--dsw-alias-label-tertiary,#888);background:var(--dsw-alias-bg-module-platform,rgba(255,255,255,.05));border-radius:8px;padding:0 6px;white-space:nowrap}
+			.skm-skill-compat{flex:none;font-size:11px;line-height:16px;color:var(--dsw-alias-label-tertiary,#888);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:170px}
+			.skm-skill-files{list-style:none;margin:0 0 2px 10px;padding:2px 0 2px 10px;border-left:1px solid var(--dsw-alias-border-l2,rgba(255,255,255,.1));display:flex;flex-direction:column;gap:0}
+			.skm-skill-file{display:flex;align-items:center;gap:6px;padding:2px 6px;border-radius:6px;font-size:12px;line-height:18px;color:var(--dsw-alias-label-secondary,#bbb);font-family:ui-monospace,monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+			.skm-skill-file:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(255,255,255,.06))}
+			.skm-skill-file[data-main='true']{color:var(--dsw-alias-label-primary,#eee);font-weight:500}
+			.skm-skill-dir{color:var(--dsw-alias-label-tertiary,#888)}
+			.skm-skill-preview{border:1px solid var(--dsw-alias-border-l1,rgba(255,255,255,.08));border-radius:10px;background:var(--dsw-alias-bg-base,#0e1116);padding:8px 12px;margin:0 0 2px 10px;font-size:12px;line-height:20px;color:var(--dsw-alias-label-primary,#eee);overflow:auto;max-height:280px;box-sizing:border-box}
+			.skm-skill-preview h3,.skm-skill-preview h4,.skm-skill-preview h5{margin:10px 0 4px;font-size:13px;line-height:20px;color:var(--dsw-alias-label-primary,#eee)}
+			.skm-skill-preview p{margin:4px 0}
+			.skm-skill-preview pre{background:var(--dsw-alias-bg-module-platform,rgba(255,255,255,.05));border-radius:8px;padding:8px 10px;overflow:auto;font-family:ui-monospace,monospace;font-size:11px;line-height:16px;color:var(--dsw-alias-label-secondary,#bbb);margin:6px 0}
+			.skm-skill-preview code{background:var(--dsw-alias-bg-module-platform,rgba(255,255,255,.05));border-radius:4px;padding:0 4px;font-family:ui-monospace,monospace;font-size:11px}
+			.skm-skill-preview a{color:var(--dsw-alias-brand-primary,#4a9eff)}
+			.skm-skill-preview ul{margin:4px 0;padding-left:18px}
+			.skm-skill-preview li{margin:2px 0}
+			.skm-viewer-modal{width:min(960px,calc(100vw - 48px))}
+			.skm-viewer-body{overflow:hidden;display:flex;flex-direction:column;height:min(640px,calc(100vh - 120px));--dsh-scrollbar-thumb:var(--dsw-alias-scrollbar-bg-l2);--dsh-scrollbar-thumb-hover:var(--dsw-alias-scrollbar-hover-l2)}
+			.skm-viewer-body > div:nth-of-type(2){flex:1;min-height:0;display:flex;flex-direction:column;margin-top:8px;padding:0 16px 16px}
+			.skm-viewer-layout{flex:1;min-height:0;display:flex;border:1px solid var(--dsw-alias-border-l1,rgba(255,255,255,.08));border-radius:12px;overflow:hidden}
+			.skm-viewer-nav{flex:none;width:200px;border-right:1px solid var(--dsw-alias-border-l1,rgba(255,255,255,.08));overflow-y:auto;padding:6px;box-sizing:border-box;background:var(--dsw-alias-bg-layer-1,#1c1f26)}
+			.skm-viewer-nav-item{display:flex;align-items:center;gap:6px;padding:3px 8px;border-radius:6px;font-size:12px;line-height:20px;color:var(--dsw-alias-label-secondary,#bbb);font-family:ui-monospace,monospace;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+			.skm-viewer-nav-item:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(255,255,255,.06))}
+			.skm-viewer-nav-item[data-active='true']{background:var(--dsw-alias-interactive-bg-hover,rgba(255,255,255,.06));color:var(--dsw-alias-label-primary,#eee)}
+			.skm-viewer-nav-dir{cursor:default;color:var(--dsw-alias-label-tertiary,#888)}
+			.skm-viewer-content{flex:1;min-width:0;overflow:auto;padding:14px 18px;box-sizing:border-box;font-size:13px;line-height:22px;color:var(--dsw-alias-label-primary,#eee)}
+			.skm-viewer-content h1,.skm-viewer-content h2,.skm-viewer-content h3,.skm-viewer-content h4{margin:12px 0 6px;line-height:26px;color:var(--dsw-alias-label-primary,#eee)}
+			.skm-viewer-content h1{font-size:20px}
+			.skm-viewer-content h2{font-size:17px}
+			.skm-viewer-content h3{font-size:15px}
+			.skm-viewer-content h4{font-size:14px}
+			.skm-viewer-content p{margin:6px 0}
+			.skm-viewer-content pre{background:var(--dsw-alias-bg-module-platform,rgba(255,255,255,.05));border-radius:8px;padding:10px 12px;overflow:auto;font-family:ui-monospace,monospace;font-size:12px;line-height:18px;color:var(--dsw-alias-label-secondary,#bbb)}
+			.skm-viewer-content code{background:var(--dsw-alias-bg-module-platform,rgba(255,255,255,.05));border-radius:4px;padding:0 4px;font-family:ui-monospace,monospace;font-size:12px}
+			.skm-viewer-content a{color:var(--dsw-alias-brand-primary,#4a9eff)}
+			.skm-viewer-content ul,.skm-viewer-content ol{margin:6px 0;padding-left:22px}
+			.skm-viewer-content li{margin:3px 0}
+			.skm-viewer-content blockquote{margin:8px 0;padding:2px 12px;border-left:3px solid var(--dsw-alias-border-l2,rgba(255,255,255,.12));color:var(--dsw-alias-label-secondary,#bbb)}
+			.skm-viewer-content hr{border:none;border-top:1px solid var(--dsw-alias-border-l1,rgba(255,255,255,.08));margin:10px 0}
 			.skm-loose-empty{margin:2px;padding:4px 0;font-size:12px;line-height:18px;color:var(--dsw-alias-label-tertiary,#888)}
 			.skm-visually-hidden{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 			`;
@@ -189,6 +246,174 @@ window.__ModuleLoader__.load({
 			    return btoa(binary);
 			  });
 			}
+			// 技能内容预览：极简 markdown 渲染（frontmatter 隐藏，标题/列表/代码块/粗体/行内代码/链接）。
+			function escapeHtml(s) {
+			  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+			}
+			function inlineMd(s) {
+			  return escapeHtml(s)
+			    .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+			    .replace(/`([^`]+)`/g, "<code>$1</code>")
+			    .replace(/\[([^\]]+)\]\((https?:[^)]+)\)/g, '<a href="$2" target="_blank" rel="noreferrer">$1</a>');
+			}
+			function renderSkillMarkdown(text) {
+			  const body = String(text).replace(/^---\r?\n[\s\S]*?\r?\n---\r?\n?/, "");
+			  const lines = body.split("\n");
+			  let html = "";
+			  let inCode = false;
+			  let codeBuf = [];
+			  let inList = false;
+			  let inQuote = false;
+			  const closeList = () => {
+			    if (inList) {
+			      html += "</ul>";
+			      inList = false;
+			    }
+			  };
+			  const closeQuote = () => {
+			    if (inQuote) {
+			      html += "</blockquote>";
+			      inQuote = false;
+			    }
+			  };
+			  for (const line of lines) {
+			    const trimmed = line.trim();
+			    if (trimmed.startsWith("```")) {
+			      if (inCode) {
+			        html += "<pre>" + escapeHtml(codeBuf.join("\n")) + "</pre>";
+			        codeBuf = [];
+			        inCode = false;
+			      } else {
+			        closeList();
+			        closeQuote();
+			        inCode = true;
+			      }
+			      continue;
+			    }
+			    if (inCode) {
+			      codeBuf.push(line);
+			      continue;
+			    }
+			    if (trimmed === "---" || trimmed === "***") {
+			      closeList();
+			      closeQuote();
+			      html += "<hr>";
+			      continue;
+			    }
+			    if (trimmed.startsWith(">")) {
+			      if (!inQuote) {
+			        closeList();
+			        html += "<blockquote>";
+			        inQuote = true;
+			      }
+			      html += "<p>" + inlineMd(trimmed.replace(/^>\s?/, "")) + "</p>";
+			      continue;
+			    }
+			    const heading = /^(#{1,4})\s+(.*)$/.exec(trimmed);
+			    if (heading !== null) {
+			      closeList();
+			      closeQuote();
+			      const level = Math.min(heading[1].length + 2, 5);
+			      html += "<h" + String(level) + ">" + inlineMd(heading[2]) + "</h" + String(level) + ">";
+			      continue;
+			    }
+			    const item = /^[-*]\s+(.*)$/.exec(trimmed);
+			    if (item !== null) {
+			      if (!inList) {
+			        closeQuote();
+			        html += "<ul>";
+			        inList = true;
+			      }
+			      html += "<li>" + inlineMd(item[1]) + "</li>";
+			      continue;
+			    }
+			    closeList();
+			    closeQuote();
+			    if (trimmed === "") {
+			      html += "<p></p>";
+			      continue;
+			    }
+			    html += "<p>" + inlineMd(trimmed) + "</p>";
+			  }
+			  closeList();
+			  closeQuote();
+			  if (inCode) html += "<pre>" + escapeHtml(codeBuf.join("\n")) + "</pre>";
+			  return html;
+			}
+			// 技能行：查看按钮 + 名称/描述 + 文件数 + compatibility + （可选）移除/归入按钮；点击查看按钮打开文件查看器。
+			function skillRowNode(skill, onView, t, bundleId, onAssign, onRemove, onDelete) {
+			  const files = Array.isArray(skill.files) ? skill.files : [];
+			  const head = [];
+			  if (files.length > 0) {
+			    head.push(React.createElement("button", {
+			      type: "button",
+			      className: css.skillExpand,
+			      "aria-label": t("viewSkillFiles"),
+			      "aria-expanded": false,
+			      onClick: () => { onView(skill); }
+			    }, React.createElement(import_dsh_client_ui_primitives.IconFolderOpenOutline16, { size: 14, "aria-hidden": "true" })));
+			  }
+			  head.push(React.createElement("span", { className: css.skillLabel, title: skill.description },
+			    React.createElement("span", { className: css.skillName }, skill.name),
+			    skill.description !== "" && React.createElement("span", { className: css.skillDescription }, skill.description)));
+			  if (typeof skill.fileCount === "number") {
+			    head.push(React.createElement("span", { className: css.skillCount }, t("fileCount", { n: skill.fileCount })));
+			  }
+			  if (skill.compatibility !== "") {
+			    head.push(React.createElement("span", { className: css.skillCompat, title: skill.compatibility }, skill.compatibility));
+			  }
+			  if (bundleId !== null) {
+			    head.push(React.createElement(import_dsh_client_ui_primitives.Tooltip, { label: t("removeSkill"), side: "bottom", delayMs: 500 },
+			      React.createElement("button", {
+			        type: "button",
+			        className: css.iconAction,
+			        "aria-label": t("removeSkill"),
+			        onClick: () => {
+			          onRemove(skill);
+			        }
+			      }, React.createElement(import_dsh_client_ui_primitives.IconTrashOutline16, { size: 14 }))));
+			  } else if (onAssign !== null) {
+			    head.push(React.createElement(import_dsh_client_ui_primitives.Tooltip, { label: t("assignToBundle"), side: "bottom", delayMs: 500 },
+			      React.createElement("button", {
+			        type: "button",
+			        className: css.iconAction,
+			        "aria-label": t("assignToBundle"),
+			        onClick: () => {
+			          onAssign(skill);
+			        }
+			      }, React.createElement(import_dsh_client_ui_primitives.IconPlusOutline16, { size: 14 }))));
+			  }
+			  if (onDelete !== null) {
+			    head.push(React.createElement(import_dsh_client_ui_primitives.Tooltip, { label: t("deleteSkillBtn"), side: "bottom", delayMs: 500 },
+			      React.createElement("button", {
+			        type: "button",
+			        className: css.iconAction,
+			        "aria-label": t("deleteSkillBtn"),
+			        onClick: () => {
+			          onDelete(skill);
+			        }
+			      }, React.createElement(import_dsh_client_ui_primitives.IconTrashOutline16, { size: 14 }))));
+			  }
+			  const children = [React.createElement("div", { className: css.skillRow }, ...head)];
+			  return React.createElement("li", { className: css.skillItem, key: skill.name }, ...children);
+			}
+			function skillFileRows(files) {
+			  const rows = [];
+			  const seenDirs = new Set();
+			  for (const path of files) {
+			    const parts = path.split("/");
+			    let dirPath = "";
+			    for (let i = 0; i < parts.length - 1; i += 1) {
+			      dirPath = dirPath === "" ? parts[i] : dirPath + "/" + parts[i];
+			      if (!seenDirs.has(dirPath)) {
+			        seenDirs.add(dirPath);
+			        rows.push({ kind: "dir", path: dirPath + "/", depth: i, main: false });
+			      }
+			    }
+			    rows.push({ kind: "file", path: path, depth: parts.length - 1, main: path === "SKILL.md" });
+			  }
+			  return rows;
+			}
 			function SkillManagerPanel({
 			  open,
 			  onClose,
@@ -205,6 +430,8 @@ window.__ModuleLoader__.load({
 			  const [state, setState] = (0, import_react.useState)({ status: "loading" });
 			  const [reload, setReload] = (0, import_react.useState)(0);
 			  const [expanded, setExpanded] = (0, import_react.useState)(/* @__PURE__ */ new Set());
+			  const [viewer, setViewer] = (0, import_react.useState)(null);
+			  const [assignTarget, setAssignTarget] = (0, import_react.useState)(null);
 			  const [newBundleOpen, setNewBundleOpen] = (0, import_react.useState)(false);
 			  const [newBundleName, setNewBundleName] = (0, import_react.useState)("");
 			  const [creatingBundle, setCreatingBundle] = (0, import_react.useState)(false);
@@ -244,6 +471,37 @@ window.__ModuleLoader__.load({
 			      else next.add(bundleId);
 			      return next;
 			    });
+			  };
+			  const loadViewerContent = async (skillName, filePath) => {
+			    try {
+			      const res = await fetch(`/api/skill-manager/skills/${encodeURIComponent(skillName)}/files/${encodeURIComponent(filePath)}`);
+			      const body = await res.json();
+			      if (body.error !== void 0) throw new Error(body.error);
+			      setViewer((v) => v === null ? v : { ...v, loading: false, content: body.content ?? "" });
+			    } catch (error) {
+			      setViewer((v) => v === null ? v : { ...v, loading: false, error: error instanceof Error ? error.message : String(error) });
+			    }
+			  };
+			  const openViewer = (skill) => {
+			    setViewer({ skill, file: "SKILL.md", loading: true });
+			    void loadViewerContent(skill.name, "SKILL.md");
+			  };
+			  const selectViewerFile = (filePath) => {
+			    if (viewer === null) return;
+			    setViewer({ ...viewer, file: filePath, loading: true, error: void 0 });
+			    void loadViewerContent(viewer.skill.name, filePath);
+			  };
+			  const doAssign = async (skill, bundleId) => {
+			    try {
+			      if (state.status !== "ready") return;
+			      const bundle = state.snapshot.bundles.find((candidate) => candidate.id === bundleId);
+			      if (bundle === void 0) throw new Error("bundle not found");
+			      await setBundleSkills(bundleId, [...bundle.skills.map((s) => s.name), skill.name]);
+			      setAssignTarget(null);
+			      refresh();
+			    } catch (error) {
+			      setInstallError(error instanceof Error ? error.message : String(error));
+			    }
 			  };
 			  const acceptFiles = (files) => {
 			    if (files === null || files.length === 0) return;
@@ -570,19 +828,8 @@ window.__ModuleLoader__.load({
 			          }
 			        },
 			        /* @__PURE__ */ React.createElement(import_dsh_client_ui_primitives.IconTrashOutline16, { size: 14 })
-			      )))), open2 && /* @__PURE__ */ React.createElement("ul", { className: css.skillList }, bundle.skills.length === 0 ? /* @__PURE__ */ React.createElement("li", { className: css.status }, t("bundleNoSkills")) : bundle.skills.map((skill) => /* @__PURE__ */ React.createElement("li", { className: css.skillRow, key: skill.name }, /* @__PURE__ */ React.createElement("span", { className: css.skillLabel, title: skill.description }, /* @__PURE__ */ React.createElement("span", { className: css.skillName }, skill.name), skill.description !== "" && /* @__PURE__ */ React.createElement("span", { className: css.skillDescription }, skill.description)), /* @__PURE__ */ React.createElement(import_dsh_client_ui_primitives.Tooltip, { label: t("removeSkill"), side: "bottom", delayMs: 500 }, /* @__PURE__ */ React.createElement(
-			        "button",
-			        {
-			          type: "button",
-			          className: css.iconAction,
-			          "aria-label": t("removeSkill"),
-			          onClick: () => {
-			            void removeFromBundle(bundle.id, skill.name);
-			          }
-			        },
-			        /* @__PURE__ */ React.createElement(import_dsh_client_ui_primitives.IconTrashOutline16, { size: 14 })
-			      ))))));
-			    })), /* @__PURE__ */ React.createElement("h3", { className: css.sectionTitle }, t("looseTitle")), loose.length === 0 ? /* @__PURE__ */ React.createElement("p", { className: css.looseEmpty }, t("looseEmpty")) : /* @__PURE__ */ React.createElement("ul", { className: css.skillList }, loose.map((skill) => /* @__PURE__ */ React.createElement("li", { className: css.skillRow, key: skill.name }, /* @__PURE__ */ React.createElement("span", { className: css.skillLabel, title: skill.description }, /* @__PURE__ */ React.createElement("span", { className: css.skillName }, skill.name), skill.description !== "" && /* @__PURE__ */ React.createElement("span", { className: css.skillDescription }, skill.description))))))),
+			      )))), open2 && /* @__PURE__ */ React.createElement("ul", { className: css.skillList }, bundle.skills.length === 0 ? /* @__PURE__ */ React.createElement("li", { className: css.status }, t("bundleNoSkills")) : bundle.skills.map((skill) => skillRowNode(skill, openViewer, t, bundle.id, null, (s) => { void removeFromBundle(bundle.id, s.name); }, (s) => { setConfirm({ kind: "skill", name: s.name }); }))));
+			    })), /* @__PURE__ */ React.createElement("h3", { className: css.sectionTitle }, t("looseTitle")), loose.length === 0 ? /* @__PURE__ */ React.createElement("p", { className: css.looseEmpty }, t("looseEmpty")) : /* @__PURE__ */ React.createElement("ul", { className: css.skillList }, loose.map((skill) => skillRowNode(skill, openViewer, t, null, (s) => { setAssignTarget(s); }, null, (s) => { setConfirm({ kind: "skill", name: s.name }); }))))),
 			    /* @__PURE__ */ React.createElement(
 			      import_dsh_client_ui_primitives.Modal,
 			      {
@@ -598,6 +845,50 @@ window.__ModuleLoader__.load({
 			          void confirmDelete();
 			        } }, t("delete")))
 			      }
+			    ),
+			    viewer !== null && /* @__PURE__ */ React.createElement(
+			      import_dsh_client_ui_primitives.Modal,
+			      {
+			        open: viewer !== null,
+			        onClose: () => {
+			          setViewer(null);
+			        },
+			        closeLabel: t("close"),
+			        title: viewer.skill.name + (viewer.file === "SKILL.md" ? "" : " · " + viewer.file),
+			        className: css.viewerModal,
+			        contentClassName: css.viewerBody
+			      },
+			      /* @__PURE__ */ React.createElement("div", { className: css.viewerLayout }, /* @__PURE__ */ React.createElement("nav", { className: css.viewerNav, "aria-label": t("viewerNav") }, skillFileRows(Array.isArray(viewer.skill.files) ? viewer.skill.files : []).map((row, index) => /* @__PURE__ */ React.createElement("div", {
+			        key: row.path + "-" + String(index),
+			        className: css.viewerNavItem + (row.kind === "dir" ? " " + css.viewerNavDir : ""),
+			        "data-active": row.kind === "file" && row.path === viewer.file ? "true" : void 0,
+			        "data-dir": row.kind === "dir" ? "true" : void 0,
+			        style: { paddingLeft: 8 + row.depth * 14 },
+			        title: row.path,
+			        onClick: row.kind === "file" ? () => {
+			          selectViewerFile(row.path);
+			        } : void 0
+			      }, row.kind === "dir" ? "📁 " : "📄 ", row.path))), /* @__PURE__ */ React.createElement("div", { className: css.viewerContent }, viewer.loading === true ? t("previewLoading") : viewer.error !== void 0 ? viewer.error : /* @__PURE__ */ React.createElement("div", { dangerouslySetInnerHTML: { __html: renderSkillMarkdown(viewer.content ?? "") } })))),
+			    assignTarget !== null && /* @__PURE__ */ React.createElement(
+			      import_dsh_client_ui_primitives.Modal,
+			      {
+			        open: assignTarget !== null,
+			        onClose: () => {
+			          setAssignTarget(null);
+			        },
+			        closeLabel: t("close"),
+			        title: t("assignTitle", { name: assignTarget.name }),
+			        className: css.viewerModal,
+			        contentClassName: css.viewerBody
+			      },
+			      /* @__PURE__ */ React.createElement("div", { className: css.skillList }, bundles.length === 0 ? /* @__PURE__ */ React.createElement("p", { className: css.looseEmpty }, t("assignEmpty")) : bundles.map((bundle) => /* @__PURE__ */ React.createElement("div", {
+			        key: bundle.id,
+			        className: css.skillRow,
+			        style: { cursor: "pointer" },
+			        onClick: () => {
+			          void doAssign(assignTarget, bundle.id);
+			        }
+			      }, /* @__PURE__ */ React.createElement("span", { className: css.skillLabel }, /* @__PURE__ */ React.createElement("span", { className: css.skillName }, bundle.name), /* @__PURE__ */ React.createElement("span", { className: css.skillDescription }, t("skillsCount", { n: bundle.skillCount }))))))
 			    )
 			  );
 			}
@@ -2119,6 +2410,7 @@ window.__ModuleLoader__.load({
 			entry: "技能", panelTitle: "技能管理", close: "关闭", loading: "正在读取技能…",
 			error: "暂时无法读取技能。", retry: "重试",
 			uploadHint: "拖入技能文件夹安装，或点击选择", uploadMeta: "{n} 个文件 · {folder}",
+			fileCount: "{n} 文件", expandSkillFiles: "展开技能文件", previewLoading: "正在加载内容…", viewSkillFiles: "查看技能文件", viewerNav: "技能文件", assignToBundle: "归入 Bundle", assignTitle: "将「{name}」归入", assignEmpty: "还没有技能包,先点「新建 Bundle」创建一个。", deleteSkillBtn: "删除技能",
 			installName: "技能名称", installNamePlaceholder: "例如 my-skill", installDescription: "描述（可选）",
 			installNameFromArchive: "技能名取自压缩包内的 SKILL.md",
 			installNameInvalid: "技能名只能包含小写字母、数字和连字符（a-z 0-9 -）",

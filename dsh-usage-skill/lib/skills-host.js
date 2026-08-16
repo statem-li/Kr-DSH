@@ -83,6 +83,21 @@ function parseFrontmatter(raw) {
   }
   return fields;
 }
+async function walkSkillDir(dir, prefix, out) {
+  let entries;
+  try {
+    entries = await readdir(dir, { withFileTypes: true });
+  } catch {
+    return;
+  }
+  entries.sort((a, b) => a.name.localeCompare(b.name));
+  for (const entry of entries) {
+    const rel = prefix === "" ? entry.name : `${prefix}/${entry.name}`;
+    if (entry.isDirectory()) await walkSkillDir(join(dir, entry.name), rel, out);
+    else out.push(rel);
+  }
+}
+
 async function readSkillMeta(root, dir) {
   let raw;
   try {
@@ -92,10 +107,21 @@ async function readSkillMeta(root, dir) {
   }
   const fields = parseFrontmatter(raw);
   const name2 = typeof fields.name === "string" && fields.name !== "" ? fields.name : dir;
+  const files = [];
+  await walkSkillDir(join(root, dir), "", files);
   return {
     name: name2,
-    description: typeof fields.description === "string" ? fields.description : ""
+    description: typeof fields.description === "string" ? fields.description : "",
+    compatibility: typeof fields.compatibility === "string" ? fields.compatibility : "",
+    fileCount: files.length,
+    files: files.slice(0, 200),
+    root: rootLabel(root)
   };
+}
+function rootLabel(root) {
+  if (root === managedRoot()) return "agents";
+  if (root === dshRoot()) return "dsh";
+  return "other";
 }
 async function listRootSkills(root) {
   const views = [];
@@ -325,6 +351,37 @@ ${description}`;
   const meta = await readSkillMeta(root, skillName);
   return { name: meta?.name ?? skillName, description: meta?.description ?? "" };
 }
+async function readSkillFile(skillName, relPath) {
+  const name2 = checkedName(skillName);
+  const roots = [managedRoot(), dshRoot()];
+  let dir = null;
+  for (const root of roots) {
+    const candidate = join(root, name2);
+    try {
+      const info = await stat(candidate);
+      if (info.isDirectory()) {
+        dir = candidate;
+        break;
+      }
+    } catch {
+    }
+  }
+  if (dir === null) throw new Error(`skill ${JSON.stringify(name2)} not found`);
+  if (relPath === "" || relPath.includes("\0") || relPath.includes("\\")) {
+    throw new Error(`unsupported file path: ${JSON.stringify(relPath)}`);
+  }
+  const target = resolveSkillFile(dir, relPath);
+  let info;
+  try {
+    info = await stat(target);
+  } catch {
+    throw new Error(`file ${JSON.stringify(relPath)} not found in skill ${JSON.stringify(name2)}`);
+  }
+  if (!info.isFile()) throw new Error(`not a file: ${JSON.stringify(relPath)}`);
+  const content = await readFile(target, "utf8");
+  return { name: name2, path: relPath, content };
+}
+
 async function deleteSkill(skillName) {
   const name2 = checkedName(skillName);
   if (!NAME_PATTERN.test(name2)) {
@@ -463,6 +520,15 @@ async function handle(ctx, req, res) {
     if (method === "DELETE" && matchSkillDelete !== null) {
       await deleteSkill(decodeURIComponent(matchSkillDelete[1]));
       json(res, 200, { ok: true });
+      return;
+    }
+    const matchSkillFile = /^\/skills\/([^/]+)\/files\/(.+)$/.exec(rest);
+    if (method === "GET" && matchSkillFile !== null) {
+      const file = await readSkillFile(
+        decodeURIComponent(matchSkillFile[1]),
+        decodeURIComponent(matchSkillFile[2])
+      );
+      json(res, 200, file);
       return;
     }
     json(res, 404, { error: `no route for ${method} ${rest}` });
