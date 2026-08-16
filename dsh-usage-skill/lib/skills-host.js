@@ -9,7 +9,7 @@ var SKILL_FILE = "SKILL.md";
 var BUNDLES_FILE = ".bundles.json";
 var ROUTE_PREFIX = "/api/skill-manager";
 var NAME_MAX = 64;
-var NAME_PATTERN = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/i;
+var NAME_PATTERN = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/;
 function managedRoot() {
   const agentsHome = process.env.DSH_AGENTS_HOME ?? join(homedir(), ".agents");
   return join(agentsHome, "skills");
@@ -227,6 +227,9 @@ ${description}`;
 }
 async function deleteSkill(skillName) {
   const name2 = checkedName(skillName);
+  if (!NAME_PATTERN.test(name2)) {
+    throw new Error("skill name must be lowercase alphanumeric/hyphen");
+  }
   const roots = [managedRoot(), dshRoot()];
   let removed = false;
   for (const root2 of roots) {

@@ -362,6 +362,9 @@ window.__ModuleLoader__.load({
 			  };
 			  const bundles = state.status === "ready" ? state.snapshot.bundles : [];
 			  const loose = state.status === "ready" ? state.snapshot.loose : [];
+			  const SKILL_NAME_PATTERN = /^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$/;
+			  const trimmedName = installName.trim();
+			  const nameInvalid = trimmedName !== "" && !SKILL_NAME_PATTERN.test(trimmedName);
 			  return /* @__PURE__ */ React.createElement(
 			    import_dsh_client_ui_primitives.Modal,
 			    {
@@ -484,7 +487,7 @@ window.__ModuleLoader__.load({
 			      },
 			      /* @__PURE__ */ React.createElement("option", { value: "" }, t("installLoose")),
 			      bundles.map((bundle) => /* @__PURE__ */ React.createElement("option", { key: bundle.id, value: bundle.id }, bundle.name))
-			    )), /* @__PURE__ */ React.createElement("span", { className: css.installMeta }, t("uploadMeta", { n: install.files.length, folder: install.folderName }))), /* @__PURE__ */ React.createElement("div", { className: css.installActions }, /* @__PURE__ */ React.createElement(import_dsh_client_ui_primitives.Button, { variant: "primary", type: "submit", disabled: installing || installName.trim() === "" }, t("installConfirm")), /* @__PURE__ */ React.createElement(import_dsh_client_ui_primitives.Button, { variant: "outline", type: "button", disabled: installing, onClick: () => {
+			    )), /* @__PURE__ */ React.createElement("span", { className: css.installMeta }, t("uploadMeta", { n: install.files.length, folder: install.folderName }))), nameInvalid && /* @__PURE__ */ React.createElement("p", { className: css.error, role: "alert" }, t("installNameInvalid")), /* @__PURE__ */ React.createElement("div", { className: css.installActions }, /* @__PURE__ */ React.createElement(import_dsh_client_ui_primitives.Button, { variant: "primary", type: "submit", disabled: installing || trimmedName === "" || nameInvalid }, t("installConfirm")), /* @__PURE__ */ React.createElement(import_dsh_client_ui_primitives.Button, { variant: "outline", type: "button", disabled: installing, onClick: () => {
 			      setInstall(null);
 			    } }, t("installCancel"))), installError !== null && /* @__PURE__ */ React.createElement("p", { className: css.error, role: "alert" }, installError)), state.status === "loading" ? /* @__PURE__ */ React.createElement("p", { className: css.status }, t("loading")) : null, state.status === "error" ? /* @__PURE__ */ React.createElement("div", { className: css.failure }, /* @__PURE__ */ React.createElement("p", { role: "alert" }, t("error")), /* @__PURE__ */ React.createElement(import_dsh_client_ui_primitives.Button, { variant: "outline", onClick: refresh }, /* @__PURE__ */ React.createElement(import_dsh_client_ui_primitives.IconRefreshOutline14, null), " ", t("retry"))) : null, state.status === "ready" && /* @__PURE__ */ React.createElement(React.Fragment, null, /* @__PURE__ */ React.createElement("h3", { className: css.sectionTitle }, t("bundlesTitle")), bundles.length === 0 ? /* @__PURE__ */ React.createElement("p", { className: css.status }, t("bundlesEmpty")) : /* @__PURE__ */ React.createElement("ul", { className: css.bundleList }, bundles.map((bundle) => {
 			      const open2 = expanded.has(bundle.id);
@@ -2091,6 +2094,7 @@ window.__ModuleLoader__.load({
 			error: "暂时无法读取技能。", retry: "重试",
 			uploadHint: "拖入技能文件夹安装，或点击选择", uploadMeta: "{n} 个文件 · {folder}",
 			installName: "技能名称", installNamePlaceholder: "例如 my-skill", installDescription: "描述（可选）",
+			installNameInvalid: "技能名只能包含小写字母、数字和连字符（a-z 0-9 -）",
 			installBundle: "归入 Bundle", installLoose: "不归组（散装）", installConfirm: "安装", installCancel: "取消",
 			bundlesTitle: "技能包", bundlesEmpty: "还没有技能包，点「新建 Bundle」创建一个。",
 			bundleNoSkills: "还没有技能，可上传或从散装技能中归入。",
