@@ -1,3 +1,4 @@
+import { apply as applySkills } from './skills-host.js';
 /**
  * dsh-usage-stats — server half.
  *
@@ -599,6 +600,10 @@ async function apply(ctx, rawConfig = {}, deps = {}) {
 		handler: (req, res) => handleSubscriptions(ctx, accounts, req, res)
 	}), "usage-stats: subscriptions route");
 	if (deps.disableBackgroundRefresh !== true) ctx.effect(() => startBackgroundRefresh(ctx, accounts), "usage-stats: background account refresh");
+	// Skill management (merged from dsh-skill-manager): bundle grouping, upload, loose skills.
+	await applySkills(ctx);
 }
 
 export { apply, Config, inject, name, USAGE_PATH, PROVIDERS_PATH, BALANCE_PATH, SUBSCRIPTIONS_PATH, ACCOUNT_PATH, configuredProviders, totalTokens, zeroBuckets };
+
+
