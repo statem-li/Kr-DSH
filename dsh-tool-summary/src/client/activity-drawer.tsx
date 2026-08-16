@@ -133,38 +133,42 @@ function DrawerToolSummary({ stats, cwd, openFile }: {
 }
 
 /** Classified reasoning blocks with per-category headings and jump targets. */
-function ReasoningGroups({ items, activeIndex }: {
+function ReasoningGroups({ items, activeIndex, jumpToCategory }: {
   readonly items: readonly ActivityReasoningItem[]
-  /** Currently navigated reasoning item (global index), for highlight. */
   readonly activeIndex: number | null
+  /** Jump to the first reasoning item of the given global-index offset. */
+  jumpToCategory: (firstIndex: number) => void
 }) {
   const groups = useMemo(() => groupReasoning(items), [items])
   let cursor = 0
   return (
     <div className="dts__modal-reasoning">
-      {groups.map(group => (
-        <div key={group.category.label} className="dts__modal-reasoning-group">
-          <div className="dts__modal-reasoning-group-title">
-            {group.category.icon} {group.category.label} ({group.items.length})
+      {groups.map(group => {
+        const firstIndex = cursor
+        cursor += group.items.length
+        return (
+          <div key={group.category.label} className="dts__modal-reasoning-group" data-reasoning-category={group.category.label}>
+            <div className="dts__modal-reasoning-group-title" role="button" tabIndex={0} onClick={() => jumpToCategory(firstIndex)}>
+              {group.category.icon} {group.category.label} ({group.items.length})
+            </div>
+            {group.items.map((item) => {
+              const globalIndex = firstIndex + group.items.indexOf(item)
+              return (
+                <div
+                  key={globalIndex}
+                  data-reasoning-index={globalIndex}
+                  data-active={activeIndex === globalIndex || undefined}
+                  className="dts__modal-reasoning-item"
+                  data-running={item.running || undefined}
+                >
+                  <span className="dts__modal-reasoning-item-index" aria-hidden>{globalIndex + 1}</span>
+                  <span className="dts__modal-reasoning-item-text">{item.text}</span>
+                </div>
+              )
+            })}
           </div>
-          {group.items.map((item) => {
-            const globalIndex = cursor
-            cursor += 1
-            return (
-              <div
-                key={globalIndex}
-                data-reasoning-index={globalIndex}
-                data-active={activeIndex === globalIndex || undefined}
-                className="dts__modal-reasoning-item"
-                data-running={item.running || undefined}
-              >
-                <span className="dts__modal-reasoning-item-index" aria-hidden>{globalIndex + 1}</span>
-                <span className="dts__modal-reasoning-item-text">{item.text}</span>
-              </div>
-            )
-          })}
-        </div>
-      ))}
+        )
+      })}
     </div>
   )
 }
@@ -224,7 +228,7 @@ function DrawerPanel({ turn, data, store, openFile, inspectCall }: {
                   ))}
                 </nav>
               )}
-              <ReasoningGroups items={reasoning} activeIndex={activeIndex} />
+              <ReasoningGroups items={reasoning} activeIndex={activeIndex} jumpToCategory={jumpTo} />
             </div>
           )}
           {mode !== 'reasoning' && toolNodes.length > 0 && (

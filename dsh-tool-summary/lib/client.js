@@ -124,33 +124,6 @@ var import_client = require("react-dom/client");
 // src/client/reasoning-classify.ts
 var CATEGORIES = [
   {
-    label: "\u63A2\u7D22\u5206\u6790",
-    icon: "\u{1F50D}",
-    patterns: [
-      /搜索/,
-      /查找/,
-      /看看/,
-      /找找/,
-      /检查/,
-      /查看/,
-      /寻找/,
-      /定位/,
-      /遍历/,
-      /目录|结构/,
-      /可能(在|是)?/,
-      /在哪里/,
-      /位置/,
-      /配置|环境/,
-      /是否|有无/,
-      /为什么|原因/,
-      /没(有|看到|找到)/,
-      /(更|更)广/,
-      /排除/,
-      /了解|认识/,
-      /读(一下|取|文件|内容)/
-    ]
-  },
-  {
     label: "\u5B9E\u65BD\u7F16\u5199",
     icon: "\u270F\uFE0F",
     patterns: [
@@ -171,6 +144,33 @@ var CATEGORIES = [
       /定义|声明/,
       /删除|清理/,
       /生成结果|产出/
+    ]
+  },
+  {
+    label: "\u539F\u56E0\u6392\u67E5",
+    icon: "\u{1F50E}",
+    patterns: [
+      /为什么/,
+      /原因/,
+      /这是因为/,
+      /根本原因/,
+      /导致/,
+      /引发/,
+      /起因/,
+      /溯源/,
+      /排查/,
+      /诊断/,
+      /定位问题/,
+      /根因/,
+      /为何/,
+      /怎么会/,
+      /哪里出(错|问题|问)/,
+      /问题出在/,
+      /报错|错误|异常/,
+      /失败(了|原因)?/,
+      /原因(是|在|何)/,
+      /(找|查)(出|到|一下|一?个)?(原因|问题|根|源头)/,
+      /解释一下/
     ]
   },
   {
@@ -246,6 +246,32 @@ var CATEGORIES = [
       /完成(了|时)?|全部(完成|搞定)/,
       /完成情况/,
       /回顾/
+    ]
+  },
+  {
+    label: "\u63A2\u7D22\u5206\u6790",
+    icon: "\u{1F50D}",
+    patterns: [
+      /搜索/,
+      /查找/,
+      /看看/,
+      /找找/,
+      /检查/,
+      /查看/,
+      /寻找/,
+      /定位/,
+      /遍历/,
+      /目录|结构/,
+      /可能(在|是)?/,
+      /在哪里/,
+      /位置/,
+      /配置|环境/,
+      /是否|有无/,
+      /没(有|看到|找到)/,
+      /(更|更)广/,
+      /排除/,
+      /了解|认识/,
+      /读(一下|取|文件|内容)/
     ]
   }
 ];
@@ -383,37 +409,40 @@ function DrawerToolSummary({ stats, cwd, openFile }) {
     )) })
   ] });
 }
-function ReasoningGroups({ items, activeIndex }) {
+function ReasoningGroups({ items, activeIndex, jumpToCategory }) {
   const groups = (0, import_react.useMemo)(() => groupReasoning(items), [items]);
   let cursor = 0;
-  return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "dts__modal-reasoning", children: groups.map((group) => /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "dts__modal-reasoning-group", children: [
-    /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "dts__modal-reasoning-group-title", children: [
-      group.category.icon,
-      " ",
-      group.category.label,
-      " (",
-      group.items.length,
-      ")"
-    ] }),
-    group.items.map((item) => {
-      const globalIndex = cursor;
-      cursor += 1;
-      return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(
-        "div",
-        {
-          "data-reasoning-index": globalIndex,
-          "data-active": activeIndex === globalIndex || void 0,
-          className: "dts__modal-reasoning-item",
-          "data-running": item.running || void 0,
-          children: [
-            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "dts__modal-reasoning-item-index", "aria-hidden": true, children: globalIndex + 1 }),
-            /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "dts__modal-reasoning-item-text", children: item.text })
-          ]
-        },
-        globalIndex
-      );
-    })
-  ] }, group.category.label)) });
+  return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", { className: "dts__modal-reasoning", children: groups.map((group) => {
+    const firstIndex = cursor;
+    cursor += group.items.length;
+    return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "dts__modal-reasoning-group", "data-reasoning-category": group.category.label, children: [
+      /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "dts__modal-reasoning-group-title", role: "button", tabIndex: 0, onClick: () => jumpToCategory(firstIndex), children: [
+        group.category.icon,
+        " ",
+        group.category.label,
+        " (",
+        group.items.length,
+        ")"
+      ] }),
+      group.items.map((item) => {
+        const globalIndex = firstIndex + group.items.indexOf(item);
+        return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)(
+          "div",
+          {
+            "data-reasoning-index": globalIndex,
+            "data-active": activeIndex === globalIndex || void 0,
+            className: "dts__modal-reasoning-item",
+            "data-running": item.running || void 0,
+            children: [
+              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "dts__modal-reasoning-item-index", "aria-hidden": true, children: globalIndex + 1 }),
+              /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", { className: "dts__modal-reasoning-item-text", children: item.text })
+            ]
+          },
+          globalIndex
+        );
+      })
+    ] }, group.category.label);
+  }) });
 }
 function DrawerPanel({ turn, data, store, openFile, inspectCall }) {
   const reasoning = data?.reasoning ?? [];
@@ -464,7 +493,7 @@ function DrawerPanel({ turn, data, store, openFile, inspectCall }) {
             },
             index
           )) }),
-          /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ReasoningGroups, { items: reasoning, activeIndex })
+          /* @__PURE__ */ (0, import_jsx_runtime.jsx)(ReasoningGroups, { items: reasoning, activeIndex, jumpToCategory: jumpTo })
         ] }),
         mode !== "reasoning" && toolNodes.length > 0 && /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", { className: "dts__modal-panel", children: [
           /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("header", { className: "dts__modal-panel-head", children: [
