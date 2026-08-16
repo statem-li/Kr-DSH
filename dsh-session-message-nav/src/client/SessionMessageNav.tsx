@@ -37,6 +37,9 @@ export type SessionMessageNavProps = PropsRuntime<'conversation.session.header.u
 interface Bar {
   key: string
   index: number
+  seq: number
+  time: number
+  full: string
 }
 
 /** 面板位置（左上角 viewport 坐标）。 */
@@ -137,6 +140,7 @@ export function SessionMessageNav(props: SessionMessageNavProps): ReactNode {
   const [buttonPos, setButtonPos] = useState<ButtonPos | null>(null)
   const [panelPos, setPanelPos] = useState<PanelPos | null>(null)
   const [activeKey, setActiveKey] = useState<string | null>(null)
+  const [hover, setHover] = useState<{ key: string; y: number } | null>(null)
   const measureRef = useRef<() => void>(() => {})
   // 无滚动条滚动（transform 驱动）：滚轮与 active 跟随共用位置状态。
   const scrollPosRef = useRef(0)
@@ -165,10 +169,13 @@ export function SessionMessageNav(props: SessionMessageNavProps): ReactNode {
     return out
   }, [snapshot])
 
-  // 横条数据：每条 = 一条我发送的消息（点击跳转用）。
+  // 横条数据：每条 = 一条我发送的消息（点击跳转 + 悬停显示内容）。
   const bars = useMemo<Bar[]>(() => userMessages.map((entry, index) => ({
     key: entry.key,
     index,
+    seq: entry.node.anchorSeq,
+    time: messageTime(entry.node),
+    full: messageText(entry.node),
   })), [userMessages])
 
   const scrollportOf = useCallback((): HTMLElement | null => {
@@ -450,6 +457,7 @@ export function SessionMessageNav(props: SessionMessageNavProps): ReactNode {
   const totalCount = userMessages.length
   const showButton = totalCount > 0
   const showPanel = panelPos !== null && bars.length >= 1
+  const hoverBar = hover === null ? null : bars.find(bar => bar.key === hover.key) ?? null
 
   const loadOlder = useCallback((): void => {
     const scrollport = scrollportOf()
@@ -545,6 +553,7 @@ export function SessionMessageNav(props: SessionMessageNavProps): ReactNode {
           onPointerDown={onPanelPointerDown}
           onPointerMove={onPanelPointerMove}
           onPointerUp={onPanelPointerUp}
+          onPointerLeave={() => { setHover(null) }}
         >
           <div ref={scrollerRef} className={css.scroller}>
             {bars.map(bar => (
@@ -553,10 +562,36 @@ export function SessionMessageNav(props: SessionMessageNavProps): ReactNode {
                   type="button"
                   className={[css.bar, bar.key === activeKey ? css.barActive : ''].filter(Boolean).join(' ')}
                   aria-label={`跳转到我的第 ${bar.index + 1} 条消息`}
+                  onMouseEnter={(event) => {
+                    const rect = event.currentTarget.getBoundingClientRect()
+                    setHover({ key: bar.key, y: rect.top + rect.height / 2 })
+                  }}
                   onClick={() => { jumpTo(bar.key) }}
                 />
               </div>
             ))}
+          </div>
+        </div>,
+        document.body,
+      )}
+      {hoverBar !== null && panelPos !== null && hover !== null && createPortal(
+        <div
+          className={css.tip}
+          style={{
+            left: panelPos.x - 312 < 8
+              ? panelPos.x + PANEL_WIDTH + 12
+              : panelPos.x - 312,
+            top: clamp(hover.y - 20, 8, window.innerHeight - 196),
+          }}
+        >
+          <div className={css.tipHead}>
+            <span>我</span>
+            <span className={css.tipMeta}>
+              {hoverBar.seq > 0 ? `#${hoverBar.seq} · ` : ''}{formatTime(hoverBar.time)}
+            </span>
+          </div>
+          <div className={css.tipBody}>
+            {hoverBar.full !== '' ? truncate(hoverBar.full, 400) : '(空消息)'}
           </div>
         </div>,
         document.body,

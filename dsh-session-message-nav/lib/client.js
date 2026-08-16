@@ -30,6 +30,10 @@ window.__ModuleLoader__.load({
 			row: "smn-row",
 			bar: "smn-bar",
 			barActive: "smn-bar-active",
+			tip: "smn-tip",
+			tipHead: "smn-tip-head",
+			tipMeta: "smn-tip-meta",
+			tipBody: "smn-tip-body",
 			flash: "smn-flash"
 		};
 		const STYLE_ID = "dsh-session-message-nav-styles";
@@ -67,6 +71,11 @@ window.__ModuleLoader__.load({
 .smn-bar:hover{opacity:1;background:var(--dsw-alias-scrollbar-hover-l2,#8a94a8)}
 .smn-bar-active{width:23px;background:var(--dsw-alias-state-business-primary,#4a9eff);opacity:1;box-shadow:0 0 6px color-mix(in srgb,var(--dsw-alias-state-business-primary,#4a9eff) 55%,transparent)}
 .smn-bar-active:hover{background:color-mix(in srgb,var(--dsw-alias-state-business-primary,#4a9eff) 78%,#fff)}
+/* 悬停横条 → 对应消息内容浮层 */
+.smn-tip{position:fixed;z-index:1300;width:300px;max-height:180px;display:flex;flex-direction:column;gap:6px;padding:10px 12px;border:1px solid var(--dsw-alias-border-l2,#333);border-radius:10px;background:var(--dsw-specific-tip,var(--dsw-alias-bg-layer-3,#1b1e24));box-shadow:var(--dsw-shadow-lv2,0 4px 20px rgba(0,0,0,.4));pointer-events:none;overflow:hidden}
+.smn-tip-head{display:flex;gap:8px;align-items:baseline;font-size:11px;font-weight:600;color:var(--dsw-alias-label-primary,#ddd);white-space:nowrap}
+.smn-tip-meta{color:var(--dsw-alias-label-tertiary,#888);font-weight:400;font-family:var(--dsw-font-mono,ui-monospace,Menlo,monospace)}
+.smn-tip-body{font-size:12px;line-height:1.55;color:var(--dsw-alias-label-secondary,#bbb);white-space:pre-wrap;word-break:break-word;overflow:hidden;display:-webkit-box;-webkit-line-clamp:6;-webkit-box-orient:vertical}
 .smn-flash{outline:2px solid var(--dsw-alias-state-business-primary,#4a9eff);outline-offset:-2px;border-radius:8px;animation:smn-flash-pulse 2.4s ease-out}
 @keyframes smn-flash-pulse{0%{background:color-mix(in srgb,var(--dsw-alias-state-business-primary,#4a9eff) 22%,transparent)}60%{background:color-mix(in srgb,var(--dsw-alias-state-business-primary,#4a9eff) 10%,transparent)}100%{background:transparent}}
 `;
@@ -189,6 +198,7 @@ window.__ModuleLoader__.load({
 			const [buttonPos, setButtonPos] = (0, react.useState)(null);
 			const [panelPos, setPanelPos] = (0, react.useState)(null);
 			const [activeKey, setActiveKey] = (0, react.useState)(null);
+			const [hover, setHover] = (0, react.useState)(null);
 			const measureRef = (0, react.useRef)(() => {});
 			const scrollPosRef = (0, react.useRef)(0);
 			const scrollTargetRef = (0, react.useRef)(0);
@@ -210,7 +220,10 @@ window.__ModuleLoader__.load({
 			}, [snapshot]);
 			const bars = (0, react.useMemo)(() => userMessages.map((entry, index) => ({
 				key: entry.key,
-				index
+				index,
+				seq: entry.node.anchorSeq,
+				time: messageTime(entry.node),
+				full: messageText(entry.node)
 			})), [userMessages]);
 			const scrollportOf = (0, react.useCallback)(() => {
 				const rootEl = hostRef.current;
@@ -458,6 +471,7 @@ window.__ModuleLoader__.load({
 			const totalCount = userMessages.length;
 			const showButton = totalCount > 0;
 			const showPanel = panelPos !== null && bars.length >= 1;
+			const hoverBar = hover === null ? null : bars.find((bar) => bar.key === hover.key) ?? null;
 			const loadOlder = (0, react.useCallback)(() => {
 				const button = (scrollportOf()?.querySelector("[data-chat-flow]"))?.querySelector("button");
 				if (button instanceof HTMLButtonElement && !button.disabled) button.click();
@@ -489,105 +503,135 @@ window.__ModuleLoader__.load({
 			return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
 				ref: hostRef,
 				className: css.host,
-				children: [showButton && buttonPos !== null && (0, react_dom.createPortal)(/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-					ref: wrapRef,
-					className: css.buttonWrap,
-					style: {
-						left: buttonPos.x,
-						top: buttonPos.y,
-						width: BUTTON_WIDTH
-					},
-					children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-						type: "button",
-						className: css.trigger,
-						"aria-haspopup": "listbox",
-						"aria-expanded": open,
-						"aria-label": `查看本会话已发送消息，共 ${totalCount} 条`,
-						title: "查看本会话全部已发送消息",
-						onClick: () => {
-							setOpen((prev) => !prev);
+				children: [
+					showButton && buttonPos !== null && (0, react_dom.createPortal)(/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+						ref: wrapRef,
+						className: css.buttonWrap,
+						style: {
+							left: buttonPos.x,
+							top: buttonPos.y,
+							width: BUTTON_WIDTH
 						},
-						children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-							className: css.triggerBadge,
-							children: totalCount
-						})
-					}), open && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-						className: css.popup,
-						role: "listbox",
-						"aria-label": "会话消息列表",
-						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-							className: css.popupHead,
-							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: "消息列表" }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("small", { children: [
-								"共 ",
-								totalCount,
-								" 条已发送 · ",
-								sessionId
-							] })]
-						}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
-							className: css.popupList,
-							children: [userMessages.map((entry, index) => {
-								const node = entry.node;
-								return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
+						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+							type: "button",
+							className: css.trigger,
+							"aria-haspopup": "listbox",
+							"aria-expanded": open,
+							"aria-label": `查看本会话已发送消息，共 ${totalCount} 条`,
+							title: "查看本会话全部已发送消息",
+							onClick: () => {
+								setOpen((prev) => !prev);
+							},
+							children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+								className: css.triggerBadge,
+								children: totalCount
+							})
+						}), open && /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+							className: css.popup,
+							role: "listbox",
+							"aria-label": "会话消息列表",
+							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+								className: css.popupHead,
+								children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: "消息列表" }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("small", { children: [
+									"共 ",
+									totalCount,
+									" 条已发送 · ",
+									sessionId
+								] })]
+							}), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+								className: css.popupList,
+								children: [userMessages.map((entry, index) => {
+									const node = entry.node;
+									return /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("button", {
+										type: "button",
+										role: "option",
+										className: css.item,
+										onClick: () => {
+											jumpTo(entry.key);
+											setOpen(false);
+										},
+										children: [
+											/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+												className: css.itemIndex,
+												children: String(index + 1).padStart(2, "0")
+											}),
+											/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+												className: css.itemMeta,
+												children: formatTime(messageTime(node))
+											}),
+											/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
+												className: css.itemText,
+												children: truncate(messageText(node), 160) || "(空消息)"
+											})
+										]
+									}, entry.key);
+								}), snapshot?.hasMore === true && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
 									type: "button",
-									role: "option",
-									className: css.item,
-									onClick: () => {
-										jumpTo(entry.key);
-										setOpen(false);
-									},
-									children: [
-										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-											className: css.itemIndex,
-											children: String(index + 1).padStart(2, "0")
-										}),
-										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-											className: css.itemMeta,
-											children: formatTime(messageTime(node))
-										}),
-										/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", {
-											className: css.itemText,
-											children: truncate(messageText(node), 160) || "(空消息)"
-										})
-									]
-								}, entry.key);
-							}), snapshot?.hasMore === true && /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-								type: "button",
-								className: css.loadOlder,
-								disabled: snapshot.loadingOlder === true,
-								onClick: loadOlder,
-								children: snapshot.loadingOlder === true ? "加载中…" : "更早的消息尚未加载 — 点击加载"
+									className: css.loadOlder,
+									disabled: snapshot.loadingOlder === true,
+									onClick: loadOlder,
+									children: snapshot.loadingOlder === true ? "加载中…" : "更早的消息尚未加载 — 点击加载"
+								})]
 							})]
 						})]
-					})]
-				}), document.body), showPanel && panelPos !== null && (0, react_dom.createPortal)(/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-					ref: panelRef,
-					className: css.panel,
-					style: {
-						left: panelPos.x,
-						top: panelPos.y,
-						width: PANEL_WIDTH,
-						height: clamp(bars.length * PANEL_ROW_HEIGHT + PANEL_PADDING, 56, 216)
-					},
-					onPointerDown: onPanelPointerDown,
-					onPointerMove: onPanelPointerMove,
-					onPointerUp: onPanelPointerUp,
-					children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-						ref: scrollerRef,
-						className: css.scroller,
-						children: bars.map((bar) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
-							"data-bar-key": bar.key,
-							className: css.row,
-							children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
-								type: "button",
-								className: [css.bar, bar.key === activeKey ? css.barActive : ""].filter(Boolean).join(" "),
-								"aria-label": `跳转到我的第 ${bar.index + 1} 条消息`,
-								onClick: () => {
-									jumpTo(bar.key);
-								}
-							})
-						}, bar.key))
-					})
-				}), document.body)]
+					}), document.body),
+					showPanel && panelPos !== null && (0, react_dom.createPortal)(/* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+						ref: panelRef,
+						className: css.panel,
+						style: {
+							left: panelPos.x,
+							top: panelPos.y,
+							width: PANEL_WIDTH,
+							height: clamp(bars.length * PANEL_ROW_HEIGHT + PANEL_PADDING, 56, 216)
+						},
+						onPointerDown: onPanelPointerDown,
+						onPointerMove: onPanelPointerMove,
+						onPointerUp: onPanelPointerUp,
+						onPointerLeave: () => {
+							setHover(null);
+						},
+						children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+							ref: scrollerRef,
+							className: css.scroller,
+							children: bars.map((bar) => /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+								"data-bar-key": bar.key,
+								className: css.row,
+								children: /* @__PURE__ */ (0, react_jsx_runtime.jsx)("button", {
+									type: "button",
+									className: [css.bar, bar.key === activeKey ? css.barActive : ""].filter(Boolean).join(" "),
+									"aria-label": `跳转到我的第 ${bar.index + 1} 条消息`,
+									onMouseEnter: (event) => {
+										const rect = event.currentTarget.getBoundingClientRect();
+										setHover({
+											key: bar.key,
+											y: rect.top + rect.height / 2
+										});
+									},
+									onClick: () => {
+										jumpTo(bar.key);
+									}
+								})
+							}, bar.key))
+						})
+					}), document.body),
+					hoverBar !== null && panelPos !== null && hover !== null && (0, react_dom.createPortal)(/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+						className: css.tip,
+						style: {
+							left: panelPos.x - 312 < 8 ? panelPos.x + PANEL_WIDTH + 12 : panelPos.x - 312,
+							top: clamp(hover.y - 20, 8, window.innerHeight - 196)
+						},
+						children: [/* @__PURE__ */ (0, react_jsx_runtime.jsxs)("div", {
+							className: css.tipHead,
+							children: [/* @__PURE__ */ (0, react_jsx_runtime.jsx)("span", { children: "我" }), /* @__PURE__ */ (0, react_jsx_runtime.jsxs)("span", {
+								className: css.tipMeta,
+								children: [hoverBar.seq > 0 ? `#${hoverBar.seq} · ` : "", formatTime(hoverBar.time)]
+							})]
+						}), /* @__PURE__ */ (0, react_jsx_runtime.jsx)("div", {
+							className: css.tipBody,
+							children: hoverBar.full !== "" ? truncate(hoverBar.full, 400) : "(空消息)"
+						})]
+					}), document.body)
+				]
 			});
 		}
 		//#endregion
