@@ -30,6 +30,9 @@ export const Config = z.object({
     timeoutMs: z.number().default(150000),
     maxTokens: z.number().default(2048),
     defaultPrompt: z.string().default('用简洁的中文描述这张图片的关键内容：画面主体、布局结构、可见文字、界面元素。不要编造细节，看不清就直说。'),
+    textModelImageFallback: z.boolean().default(true),
+    fallbackDescribePrompt: z.string().default('用简洁的中文描述这张图片的关键内容：画面主体、布局结构、可见文字、界面元素。不要编造细节，看不清就直说。'),
+    fallbackCacheSize: z.number().default(256),
 });
 const DEFAULT_VISION = 'sensenova/sensenova-6.8-flash-lite';
 const MAX_IMAGE_BYTES = 15 * 1024 * 1024; // 15MB 输入上限，防呆
@@ -406,6 +409,145 @@ export function apply(ctx, config) {
             return generateViaHttp(active, String(args.prompt), exec?.signal);
         },
     })), '@dsh-external/dsh-vision-helper: generate_image');
+    // ═══ 非多模态主模型图片降级（纯插件，不动核心）═══
+    // 原理：llm/stream 是 LlmRuntime 的 waterfall 事件，监听器可以短路——
+    // 不调用 next() 而返回自己的 chunk 流（llm-replay 官方包同款机制）。
+    // 这里检测「请求含图 + 当前模型未声明 image 输入」时，把图片块换成
+    // 辅助视觉描述文本块，构造新请求再调 ctx.llm.stream(新请求)（递归一层，
+    // 新请求无图即走正常文本链路）。会话历史与聊天界面不受影响。
+    const VISION_CONVERTED = Symbol('@dsh-external/dsh-vision-helper/converted');
+    function blocksHaveImage(blocks) {
+        return blocks.some(block => block.type === 'image'
+            || (block.type === 'tool-result' && blocksHaveImage(block.content)));
+    }
+    function messagesHaveImage(messages) {
+        return messages.some(message => blocksHaveImage(message.content));
+    }
+    // 模型能力缓存（60s）：provider/model → 是否支持 image 输入；未知不缓存。
+    // 注意：用 listModels（adapter 的原始 catalog 能力）判断，而不是
+    // resolveModelInfo —— 下方对 resolveModelInfo 做了准入包装（见 patch
+    // 说明），包装后的结果不再反映真实模态能力。
+    const modalityCache = new Map();
+    async function modelSupportsImage(provider, model) {
+        const key = `${provider}/${model}`;
+        const hit = modalityCache.get(key);
+        if (hit !== undefined && Date.now() - hit.at < 60_000)
+            return hit.supportsImage;
+        try {
+            const models = await ctx.llm.listModels(provider);
+            const entry = models.find(item => item.id === model);
+            const modalities = Array.isArray(entry?.inputModalities) ? entry.inputModalities : undefined;
+            if (modalities === undefined)
+                return undefined;
+            const supports = modalities.includes('image');
+            modalityCache.set(key, { at: Date.now(), supportsImage: supports });
+            return supports;
+        }
+        catch {
+            return undefined;
+        }
+    }
+    // ═══ host 图片准入绕行 ═══
+    // api-proxy 在 prompt 提交阶段用 ctx.llm.resolveModelInfo 检查当前模型
+    // 是否声明 image 输入，未声明则直接拒绝（MODEL_DOES_NOT_SUPPORT_IMAGES），
+    // 消息根本进不了 agent loop，llm/stream 降级因此永远轮不到。这里把
+    // llm 服务的 resolveModelInfo 包装一层：对「未声明 image 输入」的模型
+    // 把 inputModalities 抹成 undefined，让准入检查放行（api-proxy 对
+    // undefined 一律跳过）。真正的模态判断由上面的 listModels（catalog
+    // 原始能力）完成，不受本包装影响。
+    // 副作用核查：模型目录接口不用 inputModalities；read_image 工具对
+    // undefined 与 ['text'] 同样拒绝，行为不变；selectModel 对含图会话
+    // 切换非多模态模型由拒绝变为放行（与降级语义一致）。
+    if (config.textModelImageFallback) {
+        const llmService = ctx.llm;
+        const originalResolveModelInfo = llmService.resolveModelInfo.bind(llmService);
+        llmService.resolveModelInfo = async (provider, model, signal) => {
+            const info = await originalResolveModelInfo(provider, model, signal);
+            if (info && Array.isArray(info.inputModalities) && !info.inputModalities.includes('image')) {
+                return { ...info, inputModalities: undefined };
+            }
+            return info;
+        };
+    }
+    // 图片描述缓存（按附件 id；历史图片每轮请求只描述一次）
+    const descCache = new Map();
+    async function describeAttachment(attachment, signal) {
+        const cached = descCache.get(attachment.attachmentId);
+        if (cached !== undefined)
+            return cached;
+        try {
+            const attachments = ctx.get('attachments');
+            if (!attachments || typeof attachments.readImage !== 'function') {
+                throw new Error('附件服务不可用');
+            }
+            const stored = await attachments.readImage(attachment, signal);
+            const dataUrl = `data:${stored.ref.mediaType};base64,${Buffer.from(stored.data).toString('base64')}`;
+            const res = await describe(dataUrl, config.fallbackDescribePrompt, signal);
+            if (!res.ok)
+                throw new Error(res.error || '未知错误');
+            const text = `[图片·辅助视觉描述: ${res.text}]`;
+            if (descCache.size >= config.fallbackCacheSize)
+                descCache.clear();
+            descCache.set(attachment.attachmentId, text);
+            return text;
+        }
+        catch (error) {
+            const reason = String(error?.message ?? error).slice(0, 300);
+            return `[图片（辅助视觉描述失败）: ${reason}；请在「设置 → AI 模型」中确认辅助视觉模型已配置]`;
+        }
+    }
+    async function convertBlocks(blocks, signal) {
+        return Promise.all(blocks.map(async (block) => {
+            if (block.type === 'image') {
+                return { type: 'text', text: await describeAttachment(block.attachment, signal) };
+            }
+            if (block.type === 'tool-result') {
+                return { ...block, content: await convertBlocks(block.content, signal) };
+            }
+            return block;
+        }));
+    }
+    /**
+     * 需要降级时返回转换后的请求；否则返回 null（含：开关关、无图、模型
+     * 支持 image、能力未知、转换过程异常——一律原样放行，保持原错误行为）。
+     */
+    async function convertRequest(options) {
+        if (!config.textModelImageFallback)
+            return null;
+        if (!messagesHaveImage(options.messages))
+            return null;
+        const supports = await modelSupportsImage(options.provider, options.model);
+        if (supports !== false)
+            return null;
+        const messages = await Promise.all(options.messages.map(async (message) => ({
+            ...message,
+            content: await convertBlocks(message.content, options.signal),
+        })));
+        return { ...options, messages };
+    }
+    ctx.on('llm/stream', async function* (options, next) {
+        // 已转换的请求直接放行（防止递归）
+        if (options?.[VISION_CONVERTED]) {
+            yield* next();
+            return;
+        }
+        let converted = null;
+        try {
+            converted = await convertRequest(options);
+        }
+        catch {
+            converted = null;
+        }
+        if (converted === null) {
+            yield* next();
+            return;
+        }
+        ;
+        converted[VISION_CONVERTED] = true;
+        // 短路：不调用 next()，直接以转换后的请求重新进入 waterfall（第二层
+        // 因无图且带标记而走正常文本链路）
+        yield* ctx.llm.stream(converted);
+    }, { global: true });
     // 模型配置快照：webServer 只读接口（供设置页 / 排查）
     ctx.effect(() => {
         const webServer = ctx.webServer;

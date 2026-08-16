@@ -1,12 +1,14 @@
 {
-  "name": "dsh-vision-helper",
-  "version": "0.0.1",
-  "description": "辅助视觉模型：图片→文本描述，供文本模型与浏览器截图兜底使用",
+  "name": "@dsh-external/dsh-vision-helper",
+  "version": "0.0.2",
+  "description": "辅助视觉模型：图片→文本描述，供文本模型、浏览器截图兜底与聊天贴图降级使用",
   "private": true,
   "type": "module",
   "main": "./lib/index.js",
+  "types": "./lib/types/index.d.ts",
   "files": [
-    "lib"
+    "lib",
+    "scripts/build.sh"
   ],
   "license": "BSD-3-Clause",
   "peerDependencies": {
