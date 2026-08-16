@@ -93,8 +93,9 @@ window.__ModuleLoader__.load({
 			var STYLE_ID = "dsh-skill-manager-styles";
 			var SHEET = `
 			.skm-entry{flex:1 1 50%;min-width:0;display:inline-flex;align-items:center;gap:8px;height:32px;box-sizing:border-box;border:none;border-radius:10px;padding:0 8px;background:transparent;cursor:pointer;color:var(--dsw-alias-label-primary,#eee);font-family:inherit;font-size:14px;line-height:20px;overflow:hidden}
-			.skm-entry:hover{background:var(--dsw-alias-interactive-bg-hover,rgba(255,255,255,.06))}
-			.skm-entry[aria-expanded='true']{background:var(--dsw-alias-interactive-bg-hover,rgba(255,255,255,.06));color:var(--dsw-alias-label-primary,#eee)}
+			.skm-entry:hover{background:transparent}
+			.skm-entry[aria-expanded='true']{background:transparent;color:var(--dsw-alias-label-primary,#eee)}
+			.skm-entry:focus,.skm-entry:focus-visible{outline:none;border:none}
 			.skm-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 			.skm-modal{width:min(520px,calc(100vw - 48px))}
 			.skm-modal-body{overflow:hidden;display:flex;flex-direction:column}
@@ -572,6 +573,7 @@ window.__ModuleLoader__.load({
 			  );
 			}
 			
+			ensureStyles();
 			return module.exports;
 		})();
 		//#endregion
