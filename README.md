@@ -12,6 +12,9 @@
 | **[dsh-session-message-nav](dsh-session-message-nav/)** | 会话消息导航：头部「消息」弹窗列出本会话全部已发送消息（点击滚动定位）+ 右侧滚动齿轮（每节悬停预览对话内容、点击/拖动跳转） |
 | **[dsh-zh-thinking](dsh-zh-thinking/)** | 中文思考开关：设置页开关，引导模型用中文进行内部思考 |
 | **[dsh-router-standard](dsh-router-standard/)** | Task-aware reasoning-mode router：三档行为带（spec / mixed / react）、persona 与首轮工具注入、agent 可调 |
+| **[dsh-better-markdown](dsh-better-markdown/)** | 流式 Markdown 渲染：用 markstream-react 替换 DSH Web 渲染链路，更快更流畅 |
+| **[dsh-image-gallery](dsh-image-gallery/)** | 生图画廊：generate_image 结果在对话内并排缩略展示，单击 Lightbox 放大、可保存 |
+| **[dsh-tool-summary](dsh-tool-summary/)** | 工具调用聚合：每轮工具调用折叠为分组 + 总结卡片，减少消息流刷屏 |
 
 ## 安装
 
