@@ -30,13 +30,26 @@ pnpm add "link:D:\AI\Dsh\kr-dsh-upload\repo\dsh-usage-skill"
 
 bundle 插件加入 `dsh.profile.bundles` 层栈后重启 dsh web 生效；非 bundle 插件写 insert 行，配置 HMR 实时挂载。
 
-### 方式二：从 GitHub 安装
+### 方式二：从 GitHub 一句话安装
+
+每个插件对应一条命令。`dsh plugin add` 会把声明了 `dsh.bundle` 的包自动加入 profile 的 `dsh.profile.bundles` 层栈并激活（本仓库全部可挂载插件均已声明）：
 
 ```powershell
+# 示例：安装 dsh-usage-skill
 dsh plugin --profile web add "github:statem-li/Kr-DSH#main&path:/dsh-usage-skill"
 ```
 
-> 注：Windows 下 `&` 会被 cmd 当作命令分隔符，若遇到解析错误，可在 profile 目录直接执行 `pnpm add "github:statem-li/Kr-DSH#main&path:/dsh-usage-skill"`，再把包名手动加入 `dsh.profile.bundles` 层栈后重启。
+| 插件 | 一句话安装 |
+|------|-----------|
+| dsh-usage-skill | `dsh plugin --profile web add "github:statem-li/Kr-DSH#main&path:/dsh-usage-skill"` |
+| dsh-browser | `dsh plugin --profile web add "github:statem-li/Kr-DSH#main&path:/dsh-browser"` |
+| dsh-vision-helper | `dsh plugin --profile web add "github:statem-li/Kr-DSH#main&path:/dsh-vision-helper"` |
+| dsh-session-message-nav | `dsh plugin --profile web add "github:statem-li/Kr-DSH#main&path:/dsh-session-message-nav"` |
+| dsh-zh-thinking | `dsh plugin --profile web add "github:statem-li/Kr-DSH#main&path:/dsh-zh-thinking"` |
+| dsh-better-markdown | `dsh plugin --profile web add "github:statem-li/Kr-DSH#main&path:/dsh-better-markdown"` |
+| dsh-image-gallery | `dsh plugin --profile web add "github:statem-li/Kr-DSH#main&path:/dsh-image-gallery"` |
+| dsh-tool-summary | `dsh plugin --profile web add "github:statem-li/Kr-DSH#main&path:/dsh-tool-summary"` |
+| dsh-router-standard | 研究产物（非 profile 插件），按 preset 方式使用，见其目录 README |
 
 ## 说明
 
