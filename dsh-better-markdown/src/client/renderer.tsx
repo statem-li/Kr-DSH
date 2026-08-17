@@ -166,7 +166,7 @@ function ReasoningEntry({ items, running, t, turn }: {
 
 type AssistantBlock = AssistantChatData['blocks'][number]
 
-function BetterAssistantMarkdown({ blocks, streaming, interrupted, loadImage, mentions, t, group }: {
+function BetterAssistantMarkdown({ blocks, streaming, interrupted, loadImage, mentions, t, group, card }: {
   blocks: readonly AssistantBlock[]
   streaming: boolean
   interrupted?: boolean | undefined
@@ -175,6 +175,8 @@ function BetterAssistantMarkdown({ blocks, streaming, interrupted, loadImage, me
   t: ChatViewSlotProps['t']
   /** Optional content rendered above the message body (the reasoning group). */
   group?: ReactNode | undefined
+  /** Whether to wrap the rendered content in a card (finalized replies only). */
+  card?: boolean | undefined
 }) {
   const imageLoader = loadImage ?? (() => Promise.reject(new Error(t('image.serviceUnavailable'))))
   const hasVisible = streaming || interrupted === true || blocks.some(block => block.kind !== 'tool-call')
@@ -245,7 +247,9 @@ function BetterAssistantMarkdown({ blocks, streaming, interrupted, loadImage, me
     <div className="dsh-better-markdown__root" data-streaming={streaming || undefined}>
       <div className="dsh-better-markdown__body">
         {group}
-        {rendered}
+        {rendered.length > 0 && (card
+          ? <div className="dsh-better-markdown__card">{rendered}</div>
+          : <>{rendered}</>)}
         {interrupted && <span className="dsh-better-markdown__stopped">{t('message.stopped')}</span>}
       </div>
     </div>
@@ -303,6 +307,9 @@ export const BetterAssistantNodeView = memo(function BetterAssistantNodeView({
   const entry = isFirstStep && reasoningItems.length > 0
     ? <ReasoningEntry items={reasoningItems} running={turnRunning} turn={turnNumber as number} t={t} />
     : undefined
+  // Only the closing step of a closed turn is a real "reply" — the rest are
+  // intermediate fragments. Card-wrapping every finalized step looks noisy.
+  const isClosingReply = owner !== undefined
   return (
     <BetterAssistantMarkdown
       blocks={visibleBlocks}
@@ -312,6 +319,7 @@ export const BetterAssistantNodeView = memo(function BetterAssistantNodeView({
       mentions={mentions}
       t={t}
       group={entry}
+      card={isClosingReply}
     />
   )
 })

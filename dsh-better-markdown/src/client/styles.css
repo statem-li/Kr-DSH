@@ -12,6 +12,22 @@
   gap: 16px;
 }
 
+/* Card wrapper around the assistant's finalized reply content. */
+.dsh-better-markdown__card {
+  min-width: 0;
+  border: 1px solid var(--dsw-alias-border-base, rgba(127,127,127,.25));
+  border-radius: 10px;
+  background: rgba(127, 127, 127, .06);
+  padding: 12px 14px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .05);
+}
+
+@media (prefers-color-scheme: dark) {
+  .dsh-better-markdown__card {
+    background: rgba(255, 255, 255, .05);
+  }
+}
+
 .dsh-better-markdown__markdown {
   min-width: 0;
   overflow-wrap: anywhere;
@@ -44,6 +60,28 @@
   font: var(--dsw-font-markdown-code);
   font-family: var(--ds-font-family-code);
   font-size: 0.875em;
+}
+
+/* Markstream tables render only a faint bottom border per row — give them
+   proper grid lines so a table actually reads as a table. */
+.dsh-better-markdown__markdown table,
+.dsh-better-markdown__card table {
+  border-collapse: collapse;
+  border: 1px solid var(--dsw-alias-border-base, rgba(127,127,127,.35));
+}
+
+.dsh-better-markdown__markdown th,
+.dsh-better-markdown__markdown td,
+.dsh-better-markdown__card th,
+.dsh-better-markdown__card td {
+  border: 1px solid var(--dsw-alias-border-base, rgba(127,127,127,.35));
+  padding: 6px 10px;
+}
+
+.dsh-better-markdown__markdown thead th,
+.dsh-better-markdown__card thead th {
+  background: rgba(127,127,127,.08);
+  font-weight: 600;
 }
 
 .dsh-better-markdown__file-mention {
