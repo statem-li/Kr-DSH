@@ -15,11 +15,24 @@ import { lookup as dnsLookup } from "node:dns/promises";
 import { request as httpRequest } from "node:http";
 import { request as httpsRequest } from "node:https";
 import { isIP } from "node:net";
+import { createHash, randomBytes } from "node:crypto";
 
 const DEFAULT_TIMEOUT_MS = 15000;
 const DEFAULT_REFRESH_MS = 300000;
 const MAX_RESPONSE_BYTES = 1024 * 1024;
 const OPENROUTER_MANAGEMENT_REF = "OPENROUTER_MANAGEMENT_KEY";
+const SENSENOVA_CONSOLE_TOKEN_REF = "SENSENOVA_CONSOLE_TOKEN";
+const SENSENOVA_USERNAME_REF = "SENSENOVA_USERNAME";
+const SENSENOVA_PASSWORD_REF = "SENSENOVA_PASSWORD";
+const SENSENOVA_PLATFORM_ORIGIN = "https://platform.sensenova.cn";
+const SENSENOVA_ISSUER = "https://signin.sensecore.cn";
+const SENSENOVA_IAM = "https://iam.sensecoreapi.cn";
+const SENSENOVA_CLIENT_ID = "nova";
+const SENSENOVA_REDIRECT_URI = "https://platform.sensenova.cn";
+const SENSENOVA_AUTHORIZE = "https://platform.sensenova.cn/oauth2/auth";
+const SENSENOVA_SCOPE = "openid offline offline_access";
+const SENSENOVA_TOKEN_SKEW_MS = 60000;
+const sensenovaTokenCache = new Map();
 const ACCOUNT_STATUSES = new Set([
 	"ok",
 	"not-configured",
@@ -41,6 +54,7 @@ const ADAPTERS = new Set([
 	"zai-token-plan",
 	"kimi-token-plan",
 	"minimax-token-plan",
+	"sensenova-token-plan",
 	"declarative"
 ]);
 const SENSITIVE_HEADERS = new Set([
@@ -168,10 +182,12 @@ function defaultAdapter(provider) {
 	if (providerId === "zai" || providerId === "zai-coding-cn") return "zai-token-plan";
 	if (providerId === "kimi-coding" || providerId === "kimi-for-coding") return "kimi-token-plan";
 	if (["minimax", "minimaxi", "minimax-cn", "minimax-coding"].includes(providerId)) return "minimax-token-plan";
+	if (providerId === "sensenova") return "sensenova-token-plan";
 	if (providerId === "passion") return "sub2api";
 	try {
 		const hostname = new URL(provider.baseURL).hostname.toLowerCase();
 		if (hostname === "passionapi.com" || hostname.endsWith(".passionapi.com")) return "sub2api";
+		if (hostname === "token.sensenova.cn" || hostname.endsWith(".sensenova.cn")) return "sensenova-token-plan";
 	} catch {
 		// A malformed provider URL is handled by the adapter when it is queried.
 	}
@@ -181,7 +197,7 @@ function defaultAdapter(provider) {
 
 function adapterMode(adapter, monitor) {
 	if (adapter === "declarative") return monitor.mode;
-	if (["opencode-go", "zai-token-plan", "kimi-token-plan", "minimax-token-plan"].includes(adapter)) return "subscription";
+	if (["opencode-go", "zai-token-plan", "kimi-token-plan", "minimax-token-plan", "sensenova-token-plan"].includes(adapter)) return "subscription";
 	return "balance";
 }
 
@@ -264,7 +280,9 @@ export function resolveAccountSpec(provider, config = { monitors: {} }) {
 	const adapter = monitor.adapter ?? defaultAdapter(provider);
 	const mode = adapter === null ? null : adapterMode(adapter, monitor);
 	const apiKeyRef = monitor.credentialRef
-		?? (adapter === "openrouter-balance" ? OPENROUTER_MANAGEMENT_REF : provider.apiKeyEnv);
+		?? (adapter === "openrouter-balance" ? OPENROUTER_MANAGEMENT_REF
+			: adapter === "sensenova-token-plan" ? SENSENOVA_USERNAME_REF
+			: provider.apiKeyEnv);
 	return {
 		id: provider.id,
 		displayName: provider.displayName ?? provider.id,
@@ -415,10 +433,17 @@ async function assertTargetPolicy(rawUrl, spec, deps) {
 }
 
 function responseHeaders(headers) {
-	return { get: (name) => {
-		const value = headers[String(name).toLowerCase()];
-		return Array.isArray(value) ? value.join(", ") : value === void 0 ? null : String(value);
-	} };
+	return {
+		get: (name) => {
+			const value = headers[String(name).toLowerCase()];
+			return Array.isArray(value) ? value.join(", ") : value === void 0 ? null : String(value);
+		},
+		getSetCookie: () => {
+			const value = headers["set-cookie"];
+			if (value === void 0) return [];
+			return Array.isArray(value) ? value : [String(value)];
+		}
+	};
 }
 
 /** HTTPS/HTTP transport that pins the DNS answer checked by the policy layer. */
@@ -457,6 +482,7 @@ async function pinnedFetch(rawUrl, init, spec, deps) {
 			});
 		});
 		request.on("error", reject);
+		if (init?.body !== void 0 && init?.body !== null && init?.body !== "") request.write(init.body);
 		request.end();
 	});
 }
@@ -790,6 +816,221 @@ async function queryDeclarative(spec, credentials, deps, now) {
 	return spec.mode === "subscription" ? customSubscription(spec, body, now) : customBalance(spec, body, now);
 }
 
+/** Decode a JWT payload without verifying the signature (public claims only). */
+function decodeJwtPayload(token) {
+	const parts = String(token).split(".");
+	if (parts.length < 2) return null;
+	let b64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+	while (b64.length % 4 !== 0) b64 += "=";
+	try {
+		const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+		return JSON.parse(new TextDecoder().decode(bytes));
+	} catch {
+		return null;
+	}
+}
+
+function randomToken(bytes = 32) {
+	return randomBytes(bytes).toString("base64url");
+}
+
+function pkceChallenge(verifier) {
+	return createHash("sha256").update(verifier).digest("base64url");
+}
+
+function redirectLocation(response) {
+	const direct = response?.headers?.get?.("location");
+	if (typeof direct === "string" && direct !== "") return direct;
+	if (typeof response?.headers?.location === "string" && response.headers.location !== "") return response.headers.location;
+	return null;
+}
+
+/** Minimal per-host cookie jar for Hydra's CSRF cookie across the login flow. */
+function createCookieJar() {
+	const jars = new Map();
+	function capture(response, url) {
+		const setCookies = response?.headers?.getSetCookie?.();
+		if (!Array.isArray(setCookies) || setCookies.length === 0) return;
+		const host = new URL(url).hostname;
+		if (!jars.has(host)) jars.set(host, new Map());
+		const jar = jars.get(host);
+		for (const entry of setCookies) {
+			const pair = String(entry).split(";")[0];
+			const eq = pair.indexOf("=");
+			if (eq <= 0) continue;
+			jar.set(pair.slice(0, eq).trim(), pair.slice(eq + 1).trim());
+		}
+	}
+	function cookieHeader(url) {
+		const jar = jars.get(new URL(url).hostname);
+		if (jar === void 0 || jar.size === 0) return null;
+		return [...jar.entries()].map(([name, value]) => `${name}=${value}`).join("; ");
+	}
+	return { capture, cookieHeader };
+}
+
+async function requestRaw(url, init, deps, jar = null) {
+	const headers = { ...(init?.headers ?? {}) };
+	const cookie = jar === null ? null : jar.cookieHeader(url);
+	if (cookie !== null && cookie !== void 0 && cookie !== "") headers.cookie = cookie;
+	const response = await (deps.fetch ?? fetch)(url, {
+		...init,
+		headers,
+		redirect: "manual",
+		signal: AbortSignal.timeout(deps.timeoutMs ?? DEFAULT_TIMEOUT_MS)
+	});
+	if (jar !== null) jar.capture(response, url);
+	return response;
+}
+
+/**
+ * SenseNova console auth is a Hydra-style authorization-code + PKCE flow that
+ * frontends with a username/password POST. The console access token is
+ * short-lived, so the password login is only the bootstrap: the token endpoint
+ * also returns a refresh token that is used to renew the access token until the
+ * refresh token itself is rejected.
+ */
+async function sensenovaLogin(username, password, deps) {
+	const verifier = randomToken();
+	const state = randomToken();
+	const jar = createCookieJar();
+	const authorize = new URL(SENSENOVA_AUTHORIZE);
+	authorize.searchParams.set("client_id", SENSENOVA_CLIENT_ID);
+	authorize.searchParams.set("response_type", "code");
+	authorize.searchParams.set("redirect_uri", SENSENOVA_REDIRECT_URI);
+	authorize.searchParams.set("scope", SENSENOVA_SCOPE);
+	authorize.searchParams.set("state", state);
+	authorize.searchParams.set("code_challenge", pkceChallenge(verifier));
+	authorize.searchParams.set("code_challenge_method", "S256");
+
+	const authorizeResponse = await requestRaw(authorize.href, { method: "GET" }, deps, jar);
+	const loginLocation = redirectLocation(authorizeResponse);
+	if (loginLocation === null) throw statusError("invalid-response", "SenseNova login flow did not redirect to a login challenge");
+	const loginChallenge = new URL(loginLocation).searchParams.get("login_challenge");
+	if (loginChallenge === null) throw statusError("invalid-response", "SenseNova login flow did not include a login challenge");
+
+	const challengeCheck = await requestJson(`${SENSENOVA_IAM}/iam/authn/v1/auth/checkChallenge?challenge=${encodeURIComponent(loginChallenge)}`, { method: "GET", headers: { accept: "application/json" } }, deps);
+	if (challengeCheck?.is_valid !== true) throw statusError("invalid-response", "SenseNova login challenge is invalid");
+
+	const loginBody = JSON.stringify({ username, password, challenge: loginChallenge });
+	const loginResponse = await requestJson(`${SENSENOVA_IAM}/iam/authn/v1/auth/nova/login`, {
+		method: "POST",
+		headers: { "content-type": "application/json", accept: "application/json" },
+		body: loginBody
+	}, deps);
+	const next = nonEmptyString(loginResponse?.redirect);
+	if (next === null) throw statusError("invalid-response", "SenseNova login response is missing a redirect");
+
+	// Follow the Hydra login-verifier redirect chain (carrying the CSRF cookie
+	// issued by the initial authorize request) until the authorization code
+	// appears in the callback URL.
+	let code = null;
+	let cursor = next;
+	for (let hop = 0; hop < 6 && code === null; hop++) {
+		const candidate = new URL(cursor).searchParams.get("code");
+		if (candidate !== null) { code = candidate; break; }
+		const response = await requestRaw(cursor, { method: "GET" }, deps, jar);
+		const location = redirectLocation(response);
+		if (location === null) break;
+		cursor = new URL(location, cursor).href;
+	}
+	if (code === null) throw statusError("invalid-response", "SenseNova login flow did not produce an authorization code");
+
+	const tokenResponse = await requestJson(`${SENSENOVA_ISSUER}/oauth2/token`, {
+		method: "POST",
+		headers: { "content-type": "application/x-www-form-urlencoded", accept: "application/json" },
+		body: new URLSearchParams({
+			grant_type: "authorization_code",
+			code,
+			redirect_uri: SENSENOVA_REDIRECT_URI,
+			client_id: SENSENOVA_CLIENT_ID,
+			code_verifier: verifier
+		}).toString()
+	}, deps);
+	const accessToken = nonEmptyString(tokenResponse?.access_token);
+	if (accessToken === null) throw statusError("invalid-response", "SenseNova token response is missing access_token");
+	const refreshToken = nonEmptyString(tokenResponse?.refresh_token) ?? "";
+	const payload = decodeJwtPayload(accessToken);
+	const expiresAt = payload?.exp !== void 0
+		? Number(payload.exp) * 1000
+		: (deps.now ?? Date.now)() + (numberOrNull(tokenResponse?.expires_in) ?? 10800) * 1000;
+	return { accessToken, refreshToken, expiresAt };
+}
+
+async function sensenovaRefresh(refreshToken, deps) {
+	const tokenResponse = await requestJson(`${SENSENOVA_ISSUER}/oauth2/token`, {
+		method: "POST",
+		headers: { "content-type": "application/x-www-form-urlencoded", accept: "application/json" },
+		body: new URLSearchParams({
+			grant_type: "refresh_token",
+			client_id: SENSENOVA_CLIENT_ID,
+			refresh_token: refreshToken
+		}).toString()
+	}, deps);
+	const accessToken = nonEmptyString(tokenResponse?.access_token);
+	if (accessToken === null) throw statusError("invalid-response", "SenseNova refresh response is missing access_token");
+	const payload = decodeJwtPayload(accessToken);
+	const expiresAt = payload?.exp !== void 0
+		? Number(payload.exp) * 1000
+		: (deps.now ?? Date.now)() + (numberOrNull(tokenResponse?.expires_in) ?? 10800) * 1000;
+	return { accessToken, refreshToken: nonEmptyString(tokenResponse?.refresh_token) ?? refreshToken, expiresAt };
+}
+
+async function senseNovaAccessToken(spec, credentials, deps, now) {
+	const direct = await resolveCredential(credentials, SENSENOVA_CONSOLE_TOKEN_REF);
+	if (direct !== "") return { accessToken: direct, expiresAt: Number.MAX_SAFE_INTEGER };
+	const username = await resolveCredential(credentials, SENSENOVA_USERNAME_REF);
+	const password = await resolveCredential(credentials, SENSENOVA_PASSWORD_REF);
+	const missing = [
+		username === "" ? SENSENOVA_USERNAME_REF : void 0,
+		password === "" ? SENSENOVA_PASSWORD_REF : void 0
+	].filter((ref) => ref !== void 0);
+	if (missing.length > 0) {
+		sensenovaTokenCache.delete(spec.id);
+		return { error: "not-configured", missingCredentials: missing };
+	}
+	const cached = sensenovaTokenCache.get(spec.id);
+	if (cached !== void 0 && cached.expiresAt - now > SENSENOVA_TOKEN_SKEW_MS) return cached;
+	if (cached !== void 0 && cached.refreshToken !== "") {
+		try {
+			const token = await sensenovaRefresh(cached.refreshToken, deps);
+			sensenovaTokenCache.set(spec.id, token);
+			return token;
+		} catch (error) {
+			// Refresh token is gone; fall back to a fresh password login.
+		}
+	}
+	const token = await sensenovaLogin(username, password, deps);
+	sensenovaTokenCache.set(spec.id, token);
+	return token;
+}
+
+async function querySenseNova(spec, credentials, deps, now) {
+	const token = await senseNovaAccessToken(spec, credentials, deps, now);
+	if (token.error === "not-configured") return unavailableSnapshot(spec, "not-configured", now, { missingCredentials: token.missingCredentials });
+	const payload = decodeJwtPayload(token.accessToken);
+	const tenantId = nonEmptyString(payload?.ext?.tenant_id) ?? nonEmptyString(payload?.tenant_id);
+	if (tenantId === null) throw statusError("invalid-response", "SenseNova token does not contain tenant_id");
+	const url = `${SENSENOVA_PLATFORM_ORIGIN}/lite/console/v1/user/coding-plan/usages?account_id=${encodeURIComponent(tenantId)}`;
+	const body = await requestJson(url, { method: "GET", headers: { authorization: `Bearer ${token.accessToken}`, accept: "application/json" } }, deps);
+	if (body === null || typeof body !== "object" || Array.isArray(body)) throw statusError("invalid-response", "SenseNova usage response must be an object");
+	const pct = body.model_remaining_percent;
+	if (pct === null || typeof pct !== "object" || Array.isArray(pct)) throw statusError("invalid-response", "SenseNova usage response is missing model_remaining_percent");
+	const windows = [];
+	for (const [kind, raw] of Object.entries(pct)) {
+		const rem = numberOrNull(raw);
+		if (rem === null) continue;
+		const remainingPercent = round1(Math.max(0, Math.min(100, rem)));
+		windows.push({
+			kind: nonEmptyString(kind) ?? "unknown",
+			usedPercent: round1(Math.max(0, Math.min(100, 100 - remainingPercent))),
+			remainingPercent
+		});
+	}
+	if (windows.length === 0) throw statusError("invalid-response", "SenseNova usage response has no usable quota windows");
+	return { ...baseSnapshot(spec, "ok", now), plan: "Token Plan", windows, alert: subscriptionAlert(windows) };
+}
+
 /** Query one adapter and return a secret-free normalized account snapshot. */
 export async function queryAccount(spec, credentials, deps = {}) {
 	const now = (deps.now ?? Date.now)();
@@ -798,11 +1039,12 @@ export async function queryAccount(spec, credentials, deps = {}) {
 		const safeDeps = deps.fetch === void 0 ? { ...deps, fetch: (url, init) => pinnedFetch(url, init, spec, deps) } : deps;
 		if (spec.adapter === "declarative") return await queryDeclarative(spec, credentials, safeDeps, now);
 		const credential = await resolveCredential(credentials, spec.apiKeyRef);
-		if (spec.adapter !== "opencode-go" && credential === "") return unavailableSnapshot(spec, "not-configured", now, { missingCredentials: spec.apiKeyRef === void 0 ? [] : [spec.apiKeyRef] });
+		if (spec.adapter !== "opencode-go" && spec.adapter !== "sensenova-token-plan" && credential === "") return unavailableSnapshot(spec, "not-configured", now, { missingCredentials: spec.apiKeyRef === void 0 ? [] : [spec.apiKeyRef] });
 		if (schemeOfAdapter(spec.adapter) !== null) return await queryBuiltInBalance(spec, credential, safeDeps, now);
 		if (spec.adapter === "general") return await queryGeneral(spec, credential, safeDeps, now);
 		if (spec.adapter === "new-api") return await queryNewApi(spec, credentials, credential, safeDeps, now);
 		if (spec.adapter === "sub2api") return await querySub2Api(spec, credential, safeDeps, now);
+		if (spec.adapter === "sensenova-token-plan") return await querySenseNova(spec, credentials, safeDeps, now);
 		const subscriptionId = spec.adapter === "zai-token-plan" ? "zai"
 			: spec.adapter === "kimi-token-plan" ? "kimi"
 				: spec.adapter === "minimax-token-plan" ? "minimax"

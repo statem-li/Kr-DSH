@@ -549,4 +549,161 @@ console.log("IPv4/IPv6 private-address classification ok");
 	console.log("unknown monitor provider rejection ok");
 }
 
+{
+	const sensenova = {
+		id: "sensenova",
+		displayName: "SenseNova",
+		apiKeyEnv: "SENSENOVA_API_KEY",
+		baseURL: "https://token.sensenova.cn/v1"
+	};
+	const byId = resolveAccountSpec(sensenova, validateAccountConfig());
+	assert.equal(byId.adapter, "sensenova-token-plan");
+	assert.equal(byId.mode, "subscription");
+	assert.equal(byId.apiKeyRef, "SENSENOVA_USERNAME");
+	const byHost = resolveAccountSpec({ ...relay, baseURL: "https://token.sensenova.cn/v1" }, validateAccountConfig());
+	assert.equal(byHost.adapter, "sensenova-token-plan", "hostname auto-detection should bind SenseNova");
+	console.log("SenseNova adapter auto-detection ok");
+}
+
+function fakeJwt(payload) {
+	const b64url = Buffer.from(JSON.stringify(payload)).toString("base64url");
+	return `header.${b64url}.sig`;
+}
+
+function redirectResponse(location) {
+	return new Response(null, { status: 302, headers: { location } });
+}
+
+{
+	const spec = resolveAccountSpec({
+		id: "sensenova",
+		displayName: "SenseNova",
+		apiKeyEnv: "SENSENOVA_API_KEY",
+		baseURL: "https://token.sensenova.cn/v1"
+	}, validateAccountConfig());
+	const account = await queryAccount(spec, credentials({
+		SENSENOVA_CONSOLE_TOKEN: fakeJwt({ ext: { tenant_id: "test-tenant-01" } })
+	}), {
+		now: () => now,
+		fetch: async (url, init) => {
+			assert.ok(String(url).startsWith("https://platform.sensenova.cn/lite/console/v1/user/coding-plan/usages?account_id=test-tenant-01"));
+			assert.equal(init.headers.authorization, "Bearer " + fakeJwt({ ext: { tenant_id: "test-tenant-01" } }));
+			return jsonResponse({ model_remaining_percent: {
+				"sensenova-6.8-flash-lite": 95.9,
+				"sensenova-u1-fast": 99.9,
+				"deepseek-v4-flash": 32.400000000000006,
+				"glm-5.2": 88.67
+			} });
+		}
+	});
+	assert.equal(account.status, "ok");
+	assert.equal(account.mode, "subscription");
+	assert.equal(account.plan, "Token Plan");
+	assert.equal(account.windows.length, 4);
+	const rem = Object.fromEntries(account.windows.map((w) => [w.kind, w.remainingPercent]));
+	assert.equal(rem["deepseek-v4-flash"], 32.4);
+	assert.equal(rem["sensenova-6.8-flash-lite"], 95.9);
+	assert.equal(account.windows[0].usedPercent + account.windows[0].remainingPercent, 100);
+	assert.deepEqual(account.alert, { level: "normal", metric: "remaining-percent", value: 32.4 });
+	assert.equal(JSON.stringify(account).includes("test-tenant-01"), false, "tenant id extracted from token must not leak into the snapshot");
+	console.log("SenseNova Token Plan per-model quota normalization ok");
+}
+
+{
+	const calls = [];
+	const token = fakeJwt({ exp: 1790000000, ext: { tenant_id: "auto-tenant" } });
+	const spec = resolveAccountSpec({
+		id: "sensenova-login",
+		displayName: "SenseNova",
+		apiKeyEnv: "SENSENOVA_API_KEY",
+		baseURL: "https://token.sensenova.cn/v1"
+	}, validateAccountConfig());
+	const account = await queryAccount(spec, credentials({
+		SENSENOVA_USERNAME: "ATG111",
+		SENSENOVA_PASSWORD: "super-secret"
+	}), {
+		now: () => now,
+		fetch: async (url, init) => {
+			const u = String(url);
+			calls.push({ url: u, method: init?.method ?? "GET", body: init?.body });
+			if (u.includes("/oauth2/auth") && u.includes("code_challenge")) {
+				assert.equal(u.includes("client_id=nova"), true);
+				assert.equal(u.includes("code_challenge_method=S256"), true);
+				return redirectResponse("https://platform.sensenova.cn/login?login_challenge=chal-01");
+			}
+			if (u.includes("/checkChallenge")) return jsonResponse({ is_valid: true, redirect: "/console" });
+			if (u.includes("/nova/login")) {
+				const parsed = JSON.parse(init.body);
+				assert.equal(parsed.username, "ATG111");
+				assert.equal(parsed.password, "super-secret");
+				assert.equal(parsed.challenge, "chal-01");
+				return jsonResponse({ redirect: "https://signin.sensecore.cn/oauth2/auth?login_verifier=v01" });
+			}
+			if (u.includes("login_verifier=v01")) return redirectResponse("https://platform.sensenova.cn/?code=code-01&state=st");
+			if (u.includes("/oauth2/token")) {
+				const params = new URLSearchParams(init.body);
+				assert.equal(params.get("grant_type"), "authorization_code");
+				assert.equal(params.get("code"), "code-01");
+				assert.equal(params.get("client_id"), "nova");
+				assert.equal(params.get("code_verifier").length > 20, true);
+				return jsonResponse({ access_token: token, expires_in: 10800 });
+			}
+			if (u.includes("/coding-plan/usages")) {
+				assert.equal(u.includes("account_id=auto-tenant"), true);
+				assert.equal(init.headers.authorization, "Bearer " + token);
+				return jsonResponse({ model_remaining_percent: { "sensenova-u1-fast": 99.9 } });
+			}
+			throw new Error("unexpected request " + u);
+		}
+	});
+	assert.equal(account.status, "ok");
+	assert.equal(account.windows.length, 1);
+	assert.equal(account.windows[0].kind, "sensenova-u1-fast");
+	assert.equal(JSON.stringify(account).includes("super-secret"), false, "password must never leak into the snapshot");
+	assert.equal(JSON.stringify(account).includes("ATG111"), false, "username must never leak into the snapshot");
+	console.log("SenseNova password auto-login flow ok");
+}
+
+{
+	const spec = resolveAccountSpec({
+		id: "sensenova",
+		displayName: "SenseNova",
+		apiKeyEnv: "SENSENOVA_API_KEY",
+		baseURL: "https://token.sensenova.cn/v1"
+	}, validateAccountConfig());
+	const ac = await queryAccount(spec, credentials({}), { now: () => now });
+	assert.equal(ac.status, "not-configured");
+	assert.deepEqual(ac.missingCredentials, ["SENSENOVA_USERNAME", "SENSENOVA_PASSWORD"]);
+	console.log("SenseNova missing account credentials handling ok");
+}
+
+{
+	const spec = resolveAccountSpec({
+		id: "sensenova",
+		displayName: "SenseNova",
+		apiKeyEnv: "SENSENOVA_API_KEY",
+		baseURL: "https://token.sensenova.cn/v1"
+	}, validateAccountConfig());
+	const ac = await queryAccount(spec, credentials({ SENSENOVA_CONSOLE_TOKEN: fakeJwt({ sub: "u" }) }), {
+		now: () => now,
+		fetch: async () => { throw new Error("must not fetch without tenant_id"); }
+	});
+	assert.equal(ac.status, "invalid-response");
+	console.log("SenseNova rejects token without tenant_id ok");
+}
+
+{
+	for (const [httpStatus, providerStatus] of [[401, "unauthorized"], [403, "unauthorized"], [429, "rate-limited"], [503, "unavailable"]]) {
+		const spec = resolveAccountSpec({
+			id: "sensenova", displayName: "SenseNova", apiKeyEnv: "SENSENOVA_API_KEY", baseURL: "https://token.sensenova.cn/v1"
+		}, validateAccountConfig());
+		const ac = await queryAccount(spec, credentials({ SENSENOVA_CONSOLE_TOKEN: fakeJwt({ ext: { tenant_id: "t" } }) }), {
+			now: () => now,
+			fetch: async () => jsonResponse({}, httpStatus)
+		});
+		assert.equal(ac.status, providerStatus, `SenseNova HTTP ${httpStatus} -> ${providerStatus}`);
+	}
+	console.log("SenseNova HTTP status classification ok");
+}
+
 console.log("ACCOUNT TESTS PASSED");

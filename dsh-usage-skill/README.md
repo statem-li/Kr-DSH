@@ -80,6 +80,7 @@ npx --yes github:statem-li/Kr-DSH/tree/main/dsh-usage-skill --no-enable
 | Z.ai / 智谱 | 订阅 | `ZAI_API_KEY` | Coding Plan quota/subscription |
 | Kimi For Coding | 订阅 | `KIMI_API_KEY` | `/coding/v1/usages` |
 | MiniMax Coding Plan | 订阅 | `MINIMAX_API_KEY` | `/v1/token_plan/remains` |
+| SenseNova (商汤日日新) | 订阅 | `SENSENOVA_USERNAME` + `SENSENOVA_PASSWORD` | `/lite/console/v1/user/coding-plan/usages` |
 | New API | 余额 | provider 推理 Token | `/api/usage/token/` |
 | Sub2API / Passion | 自动判别 | provider `apiKeyEnv` | `/v1/usage` |
 | General / Declarative | 余额或订阅 | 配置中的 credential ref | 受限 GET + JSON |
@@ -125,6 +126,22 @@ MINIMAX_API_REGION: cn
 OpenCode Go 依次尝试 Harness credential、`~/.local/share/opencode/auth.json`，最后才使用显式 `OPENCODE_GO_AUTH_COOKIE + OPENCODE_GO_WORKSPACE_ID` 兼容回退。Bearer usage endpoint 目前不是公开 API，可能随上游变化；Cookie 等同登录凭据，不应进入日志或 issue。
 
 Z.ai 全球区使用 `api.z.ai`，中国区使用 `open.bigmodel.cn`。MiniMax 优先使用官方 `www.minimax.io` / `www.minimaxi.com` Token Plan 地址，并解析 5 小时与周窗口的剩余比例和重置时间。
+
+### SenseNova（商汤日日新）
+
+SenseNova 的余量查询走控制台 Token Plan 接口（`/lite/console/v1/user/coding-plan/usages`，按模型返回 5 小时窗口剩余百分比），**不是**推理用的 `sk-` API Key。插件会**自动登录并自动续期**，只需把账号密码存入凭据引用：
+
+```yaml
+# ~/.dsh/.credentials.yaml
+SENSENOVA_USERNAME: ATG111
+SENSENOVA_PASSWORD: 你的控制台密码
+```
+
+插件首次查询会用账号密码走 SenseNova 的 OAuth 授权码 + PKCE 登录流程换取访问令牌，并缓存返回的 `refresh_token`；之后令牌到期自动用 refresh token 续期，续期失败才自动重新登录。整个过程无需你手动操作，余量卡片像 OpenCode Go 一样直接显示。
+
+> 安全说明：`SENSENOVA_PASSWORD` 是控制台明文密码，等同登录凭据，只应写入本机 `~/.dsh/.credentials.yaml`（服务端解析，绝不进入浏览器或日志），不要提交到 Git 或粘贴给编码 Agent。账号的 `account_id`（`tenant_id`）由插件从令牌载荷自动提取，无需手动配置。
+
+若你已有控制台 OAuth 访问令牌，也可用 `SENSENOVA_CONSOLE_TOKEN` 直接注入（优先于账号密码）；令牌约 2–3 小时过期，此时需手动更新，因此推荐优先用账号密码方案。
 
 ### New API、Sub2API 与自定义 monitor
 
@@ -196,7 +213,7 @@ Passion（provider id 为 `passion` 或域名为 `*.passionapi.com`）会自动�
 
 </details>
 
-支持的 adapter：`deepseek-balance`、`openrouter-balance`、`moonshot-balance`、`zai-balance`、`new-api`、`sub2api`、`general`、`opencode-go`、`zai-token-plan`、`kimi-token-plan`、`minimax-token-plan`、`declarative`。
+支持的 adapter：`deepseek-balance`、`openrouter-balance`、`moonshot-balance`、`zai-balance`、`new-api`、`sub2api`、`general`、`opencode-go`、`zai-token-plan`、`kimi-token-plan`、`minimax-token-plan`、`sensenova-token-plan`、`declarative`。
 
 `warning.warnBelow` 与 `warning.criticalBelow` 是余额绝对值阈值。具有总额度的余额和 Token Plan 会自动产生 `normal / warning / critical` 剩余比例状态（默认 30% / 10%）。
 
@@ -238,6 +255,7 @@ Optional account setup (never handle secret values yourself):
 - OpenCode Go may reuse local auth.json or use OPENCODE_GO_API_KEY.
 - Z.ai uses ZAI_API_KEY; China accounts may set ZAI_API_REGION=bigmodel-cn.
 - Kimi and MiniMax use KIMI_API_KEY and MINIMAX_API_KEY.
+- SenseNova (商汤) uses SENSENOVA_USERNAME + SENSENOVA_PASSWORD; the plugin logs in and renews the OAuth token automatically.
 - Never ask me to paste a key or browser cookie into chat.
 
 Optional monitor setup:

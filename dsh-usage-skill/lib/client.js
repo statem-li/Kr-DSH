@@ -1029,7 +1029,16 @@ window.__ModuleLoader__.load({
 			".usg_modelBarTrack{background:var(--dsw-alias-fill-l2);border-radius:2px;height:5px;overflow:hidden}",
 			".usg_modelBar{background:var(--usg-blue);border-radius:2px;height:5px}",
 			".usg_modelMeta{color:var(--dsw-alias-label-tertiary);font-size:11px;line-height:16px;font-variant-numeric:tabular-nums}",
-			".usg_footerNote{color:var(--dsw-alias-label-caption);margin-top:10px;font-size:11px;line-height:16px;font-variant-numeric:tabular-nums}"
+			".usg_footerNote{color:var(--dsw-alias-label-caption);margin-top:10px;font-size:11px;line-height:16px;font-variant-numeric:tabular-nums}",
+			".usg_credForm{border:1px solid var(--dsw-alias-border-l2);background:var(--dsw-alias-bg-base);border-radius:10px;flex-direction:column;gap:6px;margin-top:2px;padding:8px;display:flex}",
+			".usg_credRow{flex-direction:column;gap:3px;display:flex}",
+			".usg_credLabel{color:var(--dsw-alias-label-secondary);font-size:11px;line-height:16px}",
+			".usg_credInput{box-sizing:border-box;width:100%;height:28px;color:var(--dsw-alias-label-primary);background:var(--dsw-alias-fill-l1,transparent);border:1px solid var(--dsw-alias-border-l2);border-radius:8px;padding:0 8px;font:inherit;font-size:12px;line-height:18px}",
+			".usg_credInput::placeholder{color:var(--dsw-alias-label-caption)}",
+			".usg_credActions{align-items:center;gap:8px;display:flex}",
+			".usg_credSave{cursor:pointer;color:#fff;background:var(--usg-blue,#1f6feb);border:none;border-radius:8px;padding:5px 12px;font:inherit;font-size:12px;line-height:18px}",
+			".usg_credSave:disabled{cursor:default;opacity:.5}",
+			".usg_credError{color:var(--dsw-alias-state-error-primary);font-size:11px;line-height:16px}"
 		].join("");
 		const tagId = "dsh-usage-skill/UsageStats.module.css";
 		if (typeof document !== "undefined" && document.querySelector("style[data-plugin-css=" + JSON.stringify(tagId) + "]") === null) {
@@ -1087,6 +1096,13 @@ window.__ModuleLoader__.load({
 			balanceBad: "usg_balanceBad",
 			balanceRows: "usg_balanceRows",
 			balanceRow: "usg_balanceRow",
+			credForm: "usg_credForm",
+			credRow: "usg_credRow",
+			credLabel: "usg_credLabel",
+			credInput: "usg_credInput",
+			credActions: "usg_credActions",
+			credSave: "usg_credSave",
+			credError: "usg_credError",
 			statsRow: "usg_statsRow",
 			stat: "usg_stat",
 			statValue: "usg_statValue",
@@ -1406,6 +1422,17 @@ window.__ModuleLoader__.load({
 				});
 			}, []);
 
+			const saveCredentials = react.useCallback(async (ref, value) => {
+				const response = await fetch("/api/usage-stats/credentials", {
+					method: "POST",
+					headers: { "content-type": "application/json", accept: "application/json" },
+					body: JSON.stringify({ ref, value })
+				});
+				const payload = await response.json();
+				if (!response.ok || payload.ok !== true) throw new Error(payload?.message ?? `HTTP ${response.status}`);
+				return payload;
+			}, []);
+
 			react.useEffect(() => {
 				mountedRef.current = true;
 				return () => {
@@ -1608,7 +1635,9 @@ window.__ModuleLoader__.load({
 												accountLoading,
 												accountError,
 												translate,
-												onRetry: () => loadAccount(selectedProvider, true)
+												onRetry: () => loadAccount(selectedProvider, true),
+												onSaveCredentials: saveCredentials,
+												onSaved: () => loadAccount(selectedProvider, true)
 												}, selectedProviderInfo.id)
 											}),
 											react_jsx_runtime.jsx("section", {
@@ -1936,8 +1965,59 @@ window.__ModuleLoader__.load({
 			});
 		}
 
+		/** In-panel username/password editor for the SenseNova console login. */
+		function CredentialEditor({ translate, onSave, onSaved }) {
+			const [username, setUsername] = react.useState("");
+			const [password, setPassword] = react.useState("");
+			const [saving, setSaving] = react.useState(false);
+			const [error, setError] = react.useState(null);
+			const submit = async (event) => {
+				event.preventDefault();
+				if (saving || username.trim() === "" || password === "") return;
+				setSaving(true);
+				setError(null);
+				try {
+					await onSave("SENSENOVA_USERNAME", username.trim());
+					await onSave("SENSENOVA_PASSWORD", password);
+					setPassword("");
+					onSaved?.();
+				} catch (err) {
+					setError(err instanceof Error ? err.message : String(err));
+				} finally {
+					setSaving(false);
+				}
+			};
+			return react_jsx_runtime.jsxs("form", {
+				className: S.credForm,
+				onSubmit: submit,
+				children: [
+					react_jsx_runtime.jsxs("label", {
+						className: S.credRow,
+						children: [
+							react_jsx_runtime.jsx("span", { className: S.credLabel, children: translate("credential.username") }),
+							react_jsx_runtime.jsx("input", { className: S.credInput, value: username, autoComplete: "username", placeholder: translate("credential.usernamePlaceholder"), onChange: (event) => setUsername(event.currentTarget.value) })
+						]
+					}),
+					react_jsx_runtime.jsxs("label", {
+						className: S.credRow,
+						children: [
+							react_jsx_runtime.jsx("span", { className: S.credLabel, children: translate("credential.password") }),
+							react_jsx_runtime.jsx("input", { className: S.credInput, type: "password", value: password, autoComplete: "current-password", placeholder: translate("credential.passwordPlaceholder"), onChange: (event) => setPassword(event.currentTarget.value) })
+						]
+					}),
+					react_jsx_runtime.jsxs("div", {
+						className: S.credActions,
+						children: [
+							react_jsx_runtime.jsx("button", { type: "submit", className: S.credSave, disabled: saving || username.trim() === "" || password === "", children: saving ? translate("credential.saving") : translate("credential.save") }),
+							error !== null ? react_jsx_runtime.jsx("span", { className: S.credError, children: error }) : null
+						]
+					})
+				]
+			});
+		}
+
 		/** Percentage-window body rendered inside the shared provider account frame. */
-		function SubscriptionContent({ provider, translate }) {
+		function SubscriptionContent({ provider, translate, onSaveCredentials, onSaved }) {
 			const windows = Array.isArray(provider.windows) ? provider.windows : [];
 			const status = typeof provider.status === "string" ? provider.status : "unavailable";
 			const emptyMessage = status === "not-configured"
@@ -1947,6 +2027,14 @@ window.__ModuleLoader__.load({
 						: status === "invalid-response" ? translate("account.invalidResponse")
 							: status === "unsupported" ? translate("balance.unsupported")
 								: translate("subscription.unavailable");
+			if ((status === "not-configured" || status === "unauthorized") && provider.adapter === "sensenova-token-plan" && typeof onSaveCredentials === "function") {
+				return react_jsx_runtime.jsxs("div", {
+					children: [
+						react_jsx_runtime.jsx("p", { className: S.quotaEmpty, children: emptyMessage }),
+						react_jsx_runtime.jsx(CredentialEditor, { translate, onSave: onSaveCredentials, onSaved })
+					]
+				});
+			}
 			return (status === "ok" || provider.stale === true) && windows.length > 0 ? react_jsx_runtime.jsx("div", {
 						className: S.quotaList,
 						children: windows.map((window) => {
@@ -1981,7 +2069,7 @@ window.__ModuleLoader__.load({
 		 * The single account-card interface. Provider identity/colour/status live
 		 * in the shared frame; only the inner balance/quota data varies by mode.
 		 */
-		function ProviderAccountCard({ provider, account, accountLoading, accountError, translate, onRetry }) {
+		function ProviderAccountCard({ provider, account, accountLoading, accountError, translate, onRetry, onSaveCredentials, onSaved }) {
 			const mode = account?.mode ?? provider.accountMode ?? "balance";
 			const subscriptionMode = mode === "subscription";
 			const status = accountLoading && account === null ? "loading" : account?.status ?? "unavailable";
@@ -2023,7 +2111,7 @@ window.__ModuleLoader__.load({
 							]
 						}) : accountLoading && account === null
 							? react_jsx_runtime.jsx("p", { className: S.quotaEmpty, children: translate("subscription.loading") })
-							: react_jsx_runtime.jsx(SubscriptionContent, { provider: account ?? { status: "unavailable", windows: [] }, translate })
+							: react_jsx_runtime.jsx(SubscriptionContent, { provider: account ?? { status: "unavailable", windows: [] }, translate, onSaveCredentials, onSaved })
 						: react_jsx_runtime.jsx(BalanceContent, { balance: account?.balance ?? null, state: balanceState, message: balanceMessage, translate, onRetry })
 				]
 			});
@@ -2274,6 +2362,12 @@ window.__ModuleLoader__.load({
 			"subscription.rateLimited": "供应商暂时限制查询，请稍后重试。",
 			"subscription.unavailable": "供应商没有返回可识别的额度窗口。",
 			"subscription.planUnknown": "订阅计划",
+			"credential.username": "控制台账号",
+			"credential.password": "控制台密码",
+			"credential.usernamePlaceholder": "ATG111",
+			"credential.passwordPlaceholder": "输入密码",
+			"credential.save": "保存并查询",
+			"credential.saving": "保存中…",
 			"usage.title": "Token 用量",
 			"usage.today": "今日",
 			"usage.month": "本月",
@@ -2361,6 +2455,12 @@ window.__ModuleLoader__.load({
 			"subscription.rateLimited": "The provider is rate limiting checks; retry later.",
 			"subscription.unavailable": "The provider returned no recognizable quota windows.",
 			"subscription.planUnknown": "Subscription plan",
+			"credential.username": "Console account",
+			"credential.password": "Console password",
+			"credential.usernamePlaceholder": "ATG111",
+			"credential.passwordPlaceholder": "Enter password",
+			"credential.save": "Save & query",
+			"credential.saving": "Saving…",
 			"usage.title": "Token usage",
 			"usage.today": "Today",
 			"usage.month": "This month",

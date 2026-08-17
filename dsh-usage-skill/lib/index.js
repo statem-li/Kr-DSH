@@ -48,8 +48,12 @@ const PROVIDERS_PATH = "/api/usage-stats/providers";
 const BALANCE_PATH = "/api/usage-stats/balance";
 const SUBSCRIPTIONS_PATH = "/api/usage-stats/subscriptions";
 const ACCOUNT_PATH = "/api/usage-stats/account";
+const CREDENTIALS_PATH = "/api/usage-stats/credentials";
 const UPSTREAM_TIMEOUT_MS = 15000;
 const CACHE_VERSION = 3;
+
+/** Credential references the in-panel editor may write (SenseNova console login). */
+const WRITABLE_CREDENTIAL_REFS = new Set(["SENSENOVA_USERNAME", "SENSENOVA_PASSWORD", "SENSENOVA_CONSOLE_TOKEN"]);
 
 /** Default DeepSeek connection facts when the settings namespace is absent. */
 const DEEPSEEK_DEFAULTS = {
@@ -117,6 +121,39 @@ function rejectForeignCaller(req, res) {
 	if (isLoopbackAddress(peer) && isLoopbackHostHeader(req)) return false;
 	json(res, 403, { ok: false, error: "forbidden" });
 	return true;
+}
+
+/** Refuse non-loopback callers only (the credential editor accepts POST). */
+function rejectForeignWrite(req, res) {
+	const peer = req.socket?.remoteAddress;
+	if (isLoopbackAddress(peer) && isLoopbackHostHeader(req)) return false;
+	json(res, 403, { ok: false, error: "forbidden" });
+	return true;
+}
+
+/** Read a JSON request body with a hard size cap (secret values included). */
+function readJsonBody(req, maxBytes = 64 * 1024) {
+	return new Promise((resolve, reject) => {
+		const chunks = [];
+		let size = 0;
+		req.on("data", (chunk) => {
+			size += chunk.length;
+			if (size > maxBytes) {
+				reject(new Error("request body exceeds the size limit"));
+				req.destroy();
+				return;
+			}
+			chunks.push(chunk);
+		});
+		req.on("end", () => {
+			try {
+				resolve(JSON.parse(Buffer.concat(chunks).toString("utf8")));
+			} catch {
+				reject(new Error("request body is not valid JSON"));
+			}
+		});
+		req.on("error", reject);
+	});
 }
 
 //#region incremental cache
@@ -448,6 +485,39 @@ async function handleAccount(ctx, accounts, req, res) {
 	}
 }
 
+/** Write one allow-listed credential reference through the credentials seam. */
+async function handleCredentials(ctx, accounts, req, res) {
+	if (rejectForeignWrite(req, res)) return;
+	if (req.method !== "POST") {
+		res.writeHead(405, { "content-type": "application/json; charset=utf-8" });
+		res.end(JSON.stringify({ ok: false, error: "method-not-allowed" }));
+		return;
+	}
+	try {
+		const body = await readJsonBody(req);
+		const ref = typeof body?.ref === "string" ? body.ref.trim() : "";
+		const value = typeof body?.value === "string" ? body.value : "";
+		if (!WRITABLE_CREDENTIAL_REFS.has(ref)) {
+			json(res, 400, { ok: false, error: "invalid-ref", message: `credential "${ref}" is not writable from the panel` });
+			return;
+		}
+		if (value === "") {
+			json(res, 400, { ok: false, error: "empty-value", message: "credential value must not be empty" });
+			return;
+		}
+		const credentials = ctx.get("credentials") ?? ctx.credentials;
+		if (credentials === null || credentials === void 0 || typeof credentials.set !== "function") {
+			json(res, 500, { ok: false, error: "read-only", message: "credential store is read-only" });
+			return;
+		}
+		await credentials.set(ref, value);
+		json(res, 200, { ok: true, ref });
+	} catch (error) {
+		ctx.logger.warn(`usage-stats: credential write failed: ${String(error)}`);
+		json(res, 500, { ok: false, error: "internal", message: error instanceof Error ? error.message : String(error) });
+	}
+}
+
 /** Backward-compatible balance route delegated to the account registry. */
 async function handleBalance(ctx, accounts, req, res) {
 	if (rejectForeignCaller(req, res)) return;
@@ -591,6 +661,11 @@ async function apply(ctx, rawConfig = {}, deps = {}) {
 	}), "usage-stats: account route");
 	ctx.effect(() => ctx.webServer.register({
 		kind: "exact",
+		path: CREDENTIALS_PATH,
+		handler: (req, res) => handleCredentials(ctx, accounts, req, res)
+	}), "usage-stats: credentials route");
+	ctx.effect(() => ctx.webServer.register({
+		kind: "exact",
 		path: BALANCE_PATH,
 		handler: (req, res) => handleBalance(ctx, accounts, req, res)
 	}), "usage-stats: balance route");
@@ -604,6 +679,6 @@ async function apply(ctx, rawConfig = {}, deps = {}) {
 	await applySkills(ctx);
 }
 
-export { apply, Config, inject, name, USAGE_PATH, PROVIDERS_PATH, BALANCE_PATH, SUBSCRIPTIONS_PATH, ACCOUNT_PATH, configuredProviders, totalTokens, zeroBuckets };
+export { apply, Config, inject, name, USAGE_PATH, PROVIDERS_PATH, BALANCE_PATH, SUBSCRIPTIONS_PATH, ACCOUNT_PATH, CREDENTIALS_PATH, configuredProviders, totalTokens, zeroBuckets };
 
 
